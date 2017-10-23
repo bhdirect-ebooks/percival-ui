@@ -1,73 +1,57 @@
 module Decoders exposing (..)
 
-import Json.Decode as Decode exposing (Decoder, int, list, string)
-import Json.Decode.Pipeline as Pipeline exposing (decode, required)
+import Json.Decode as Decode exposing (Decoder, bool, int, list, string)
+import Json.Decode.Pipeline as Pipeline exposing (decode, hardcoded, optional, required)
 import Types exposing (..)
 
 
-decodeFileData : Decoder FileData
-decodeFileData =
-    decode FileData
-        |> required "title" string
-        |> required "structure" (list string)
-        |> required "files" (list decodeFile)
-        |> required "toc" decodeToc
-        |> required "context" string
+decodePercivalData : Decoder PercivalData
+decodePercivalData =
+    decode PercivalData
+        |> required "vol_title" string
+        |> required "opts" decodeOpts
+        |> required "docs" (list decodeDoc)
+        |> required "blocks" (list decodeBlock)
 
 
-decodeFile : Decoder File
-decodeFile =
-    decode File
+decodeOpts : Decoder Opts
+decodeOpts =
+    decode Opts
+        |> required "vers" string
+        |> required "lang" string
+
+
+decodeDoc : Decoder Doc
+decodeDoc =
+    decode Doc
+        |> required "_id" string
         |> required "name" string
-        |> required "issues" (list decodeIssue)
-        |> required "scripture" (list decodeIssue)
-        |> required "outline" string
-        |> required "lists" string
-        |> required "tables" (list decodeSection)
-        |> required "quotes" (list decodeSection)
-        |> required "asides" (list decodeSection)
 
 
-decodeIssue : Decoder Issue
-decodeIssue =
-    decode Issue
-        |> required "line" string
-        |> required "col" string
-        |> required "message" string
-        |> required "help" string
-        |> required "class" decodeIssueClass
-
-
-decodeIssueClass : Decoder IssueClass
-decodeIssueClass =
-    Decode.map classToIssueClass string
-
-
-classToIssueClass : String -> IssueClass
-classToIssueClass class =
-    case class of
-        "error" ->
-            IssueError
-
-        "warning" ->
-            IssueWarning
-
-        "light-warning" ->
-            IssueLight
-
-        _ ->
-            IssueError
-
-
-decodeSection : Decoder Section
-decodeSection =
-    decode Section
-        |> required "line" int
+decodeBlock : Decoder Block
+decodeBlock =
+    decode Block
+        |> required "_id" string
         |> required "html" string
+        |> required "refs" (list decodeRef)
+        |> hardcoded False
 
 
-decodeToc : Decoder Toc
-decodeToc =
-    decode Toc
-        |> required "user" string
-        |> required "comp" string
+decodeRef : Decoder Ref
+decodeRef =
+    decode Ref
+        |> required "_id" string
+        |> required "text" string
+        |> required "data" decodeRefData
+        |> hardcoded False
+
+
+decodeRefData : Decoder RefData
+decodeRefData =
+    decode RefData
+        |> required "scripture" string
+        |> optional "valid" bool False
+        |> optional "message" string ""
+        |> optional "confidence" int 0
+        |> optional "possibile" (list string) []
+        |> optional "confirmed" bool False

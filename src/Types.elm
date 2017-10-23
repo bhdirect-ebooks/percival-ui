@@ -1,130 +1,68 @@
 module Types exposing (..)
 
-import Html exposing (..)
 import Http
-import Navigation exposing (Location)
-
-
-type IssueClass
-    = IssueError
-    | IssueWarning
-    | IssueLight
-
-
-type Stage
-    = Structure
-    | FileIssues
-    | ScripIssues
-    | HeadOutline
-    | ListInspect
-    | TableInspect
-    | QuoteInspect
-    | AsideInspect
-    | TocDiff
 
 
 type alias Model =
-    { reportData : FileData
-    , route : Route
-    , location : Location
+    { percivalData : PercivalData
+    , currentDoc : String
+    , currentRef : String
     , loadingError : Maybe String
-    , sidebarMinimized : Bool
-    , sidebarMobileShow : Bool
-    , headDropIsOpen : Bool
-    , listDropIsOpen : Bool
-    , tableDropIsOpen : Bool
-    , quoteDropIsOpen : Bool
-    , asideDropIsOpen : Bool
-    , tocDropIsOpen : Bool
-    , activeLinkId : String
-    , navLinks : List NavLink
+    , isSaving : Bool
+    , inEditMode : Bool
     }
 
 
-type alias NavLink =
-    { href : String
-    , id : String
-    , isActive : Bool
-    , stage : Stage
-    , text : String
+type alias PercivalData =
+    { volumeTitle : String
+    , parserOpts : Opts
+    , docs : List Doc
+    , blocks : List Block
     }
 
 
-type alias Name =
+type alias Osis =
     String
 
 
-type alias FileData =
-    { title : String
-    , structure : List String
-    , files : List File
-    , toc : Toc
-    , context : String
+type alias Opts =
+    { versification : String
+    , language : String
     }
 
 
-type alias File =
-    { name : Name
-    , issues : List Issue
-    , scripture : List Issue
-    , outline : String
-    , lists : String
-    , tables : List Section
-    , quotes : List Section
-    , asides : List Section
+type alias Doc =
+    { id : String
+    , name : String
     }
 
 
-type alias Issue =
-    { line : String
-    , col : String
-    , message : String
-    , help : String
-    , class : IssueClass
-    }
-
-
-type alias Section =
-    { line : Int
+type alias Block =
+    { id : String
     , html : String
+    , refs : List Ref
+    , isSelected : Bool
     }
 
 
-type alias MainView =
-    { stage : Stage
-    , title : String
-    , content : Html Msg
+type alias Ref =
+    { id : String
+    , text : String
+    , data : RefData
+    , hasFocus : Bool
     }
 
 
-type alias Toc =
-    { user : String
-    , comp : String
+type alias RefData =
+    { scripture : Osis
+    , valid : Bool
+    , message : String
+    , confidence : Int
+    , possibile : List Osis
+    , confirmed : Bool
     }
-
-
-type Route
-    = StructRoute
-    | FileRoute
-    | ScripRoute
-    | TocRoute
-    | OutlineRoute Name
-    | ListsRoute Name
-    | TablesRoute Name
-    | QuotesRoute Name
-    | AsidesRoute Name
-    | NotFoundRoute
 
 
 type Msg
     = DoNothing
-    | LoadData (Result Http.Error FileData)
-    | OnLocationChange Location
-    | SetActiveLink String
-    | ToggleSidebar
-    | ToggleMobileSide
-    | ToggleHeadDrop
-    | ToggleListDrop
-    | ToggleTableDrop
-    | ToggleQuoteDrop
-    | ToggleAsideDrop
+    | LoadData (Result Http.Error PercivalData)

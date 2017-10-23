@@ -1,7 +1,7 @@
 {
-    "version": "1.0.0",
-    "summary": "Report for B&H Direct's stylecheck",
-    "repository": "https://github.com/bhdirect-ebooks/stylecheck-report.git",
+    "version": "0.0.1",
+    "summary": "Percival's fancy get-up",
+    "repository": "https://github.com/bhdirect-ebooks/percival-report.git",
     "license": "MIT",
     "source-directories": [
         ".",
