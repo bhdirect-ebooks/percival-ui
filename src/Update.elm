@@ -18,7 +18,7 @@ update msg model =
                     Debug.log "Err" err
             in
             ( { model
-                | loadingError = Just "Error! (Try turning it off and on again?)"
+                | loadingError = Just "Well, this is embarrassing. Something went wrong."
               }
             , Cmd.none
             )

@@ -1,12 +1,13 @@
 module Types exposing (..)
 
+import Dict
 import Http
 
 
 type alias Model =
     { percivalData : PercivalData
-    , currentDoc : String
-    , currentRef : String
+    , currentDocId : String
+    , currentRefId : String
     , loadingError : Maybe String
     , isSaving : Bool
     , inEditMode : Bool
@@ -16,8 +17,8 @@ type alias Model =
 type alias PercivalData =
     { volumeTitle : String
     , parserOpts : Opts
-    , docs : List Doc
-    , blocks : List Block
+    , docs : Dict.Dict String Doc
+    , blocks : Dict.Dict String Block
     }
 
 
@@ -32,24 +33,20 @@ type alias Opts =
 
 
 type alias Doc =
-    { id : String
-    , name : String
+    { name : String
+    , navOrder : Int
     }
 
 
 type alias Block =
-    { id : String
-    , html : String
-    , refs : List Ref
-    , isSelected : Bool
+    { html : String
+    , refs : Dict.Dict String Ref
     }
 
 
 type alias Ref =
-    { id : String
-    , text : String
+    { text : String
     , data : RefData
-    , hasFocus : Bool
     }
 
 

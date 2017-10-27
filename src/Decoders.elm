@@ -1,6 +1,7 @@
 module Decoders exposing (..)
 
-import Json.Decode as Decode exposing (Decoder, bool, int, list, string)
+import Dict
+import Json.Decode as Decode exposing (Decoder, bool, dict, int, list, string)
 import Json.Decode.Pipeline as Pipeline exposing (decode, hardcoded, optional, required)
 import Types exposing (..)
 
@@ -10,8 +11,8 @@ decodePercivalData =
     decode PercivalData
         |> required "vol_title" string
         |> required "opts" decodeOpts
-        |> required "docs" (list decodeDoc)
-        |> required "blocks" (list decodeBlock)
+        |> required "docs" decodeDocDict
+        |> required "blocks" decodeBlockDict
 
 
 decodeOpts : Decoder Opts
@@ -21,29 +22,40 @@ decodeOpts =
         |> required "lang" string
 
 
+decodeDocDict : Decoder (Dict.Dict String Doc)
+decodeDocDict =
+    dict decodeDoc
+
+
 decodeDoc : Decoder Doc
 decodeDoc =
     decode Doc
-        |> required "_id" string
         |> required "name" string
+        |> required "nav_order" int
+
+
+decodeBlockDict : Decoder (Dict.Dict String Block)
+decodeBlockDict =
+    dict decodeBlock
 
 
 decodeBlock : Decoder Block
 decodeBlock =
     decode Block
-        |> required "_id" string
         |> required "html" string
         |> required "refs" (list decodeRef)
-        |> hardcoded False
+
+
+decodeRefDict : Decoder (Dict.Dict String Ref)
+decodeRefDict =
+    dict decodeRef
 
 
 decodeRef : Decoder Ref
 decodeRef =
     decode Ref
-        |> required "_id" string
         |> required "text" string
         |> required "data" decodeRefData
-        |> hardcoded False
 
 
 decodeRefData : Decoder RefData
