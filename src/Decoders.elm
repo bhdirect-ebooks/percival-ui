@@ -6,6 +6,7 @@ import Json.Decode.Pipeline as Pipeline exposing (decode, hardcoded, optional, r
 import Types exposing (..)
 
 
+
 decodePercivalData : Decoder PercivalData
 decodePercivalData =
     decode PercivalData
@@ -31,7 +32,6 @@ decodeDoc : Decoder Doc
 decodeDoc =
     decode Doc
         |> required "name" string
-        |> required "nav_order" int
 
 
 decodeBlockDict : Decoder (Dict.Dict String Block)
@@ -43,7 +43,7 @@ decodeBlock : Decoder Block
 decodeBlock =
     decode Block
         |> required "html" string
-        |> required "refs" (list decodeRef)
+        |> required "refs" decodeRefDict
 
 
 decodeRefDict : Decoder (Dict.Dict String Ref)

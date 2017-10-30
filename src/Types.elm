@@ -2,6 +2,18 @@ module Types exposing (..)
 
 import Dict
 import Http
+import Keyboard exposing (KeyCode)
+
+
+type NavDir
+    = Prev
+    | Next
+
+
+type RefType
+    = FullConf
+    | LowConf
+    | Invalid
 
 
 type alias Model =
@@ -33,9 +45,7 @@ type alias Opts =
 
 
 type alias Doc =
-    { name : String
-    , navOrder : Int
-    }
+    { name : String }
 
 
 type alias Block =
@@ -63,3 +73,6 @@ type alias RefData =
 type Msg
     = DoNothing
     | LoadData (Result Http.Error PercivalData)
+    | KeyDown KeyCode
+    | ToNextDoc
+    | ToPrevDoc
