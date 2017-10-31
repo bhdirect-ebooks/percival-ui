@@ -2,7 +2,8 @@ module Types exposing (..)
 
 import Dict
 import Http
-import Keyboard exposing (KeyCode)
+import Keyboard.Combo
+import UndoList exposing (UndoList)
 
 
 type NavDir
@@ -18,19 +19,23 @@ type RefType
 
 type alias Model =
     { percivalData : PercivalData
+    , blockState : UndoList BlockDict
     , currentDocId : String
     , currentRefId : String
     , loadingError : Maybe String
     , isSaving : Bool
     , inEditMode : Bool
+    , inHelp : Bool
+    , listedRefs : Maybe RefType
+    , keys : Keyboard.Combo.Model Msg
     }
 
 
 type alias PercivalData =
     { volumeTitle : String
     , parserOpts : Opts
-    , docs : Dict.Dict String Doc
-    , blocks : Dict.Dict String Block
+    , docs : DocDict
+    , blocks : BlockDict
     }
 
 
@@ -44,13 +49,25 @@ type alias Opts =
     }
 
 
+type alias DocDict =
+    Dict.Dict String Doc
+
+
+type alias BlockDict =
+    Dict.Dict String Block
+
+
+type alias RefDict =
+    Dict.Dict String Ref
+
+
 type alias Doc =
     { name : String }
 
 
 type alias Block =
     { html : String
-    , refs : Dict.Dict String Ref
+    , refs : RefDict
     }
 
 
@@ -73,6 +90,10 @@ type alias RefData =
 type Msg
     = DoNothing
     | LoadData (Result Http.Error PercivalData)
-    | KeyDown KeyCode
+    | ComboMsg Keyboard.Combo.Msg
+    | Undo
+    | Redo
+    | ToggleHelp
     | ToNextDoc
     | ToPrevDoc
+    | ShowRefs (Maybe RefType)

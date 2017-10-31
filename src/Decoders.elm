@@ -1,10 +1,8 @@
 module Decoders exposing (..)
 
-import Dict
-import Json.Decode as Decode exposing (Decoder, bool, dict, int, list, string)
+import Json.Decode as Decode exposing (Decoder, bool, dict, int, list, map, string)
 import Json.Decode.Pipeline as Pipeline exposing (decode, hardcoded, optional, required)
 import Types exposing (..)
-
 
 
 decodePercivalData : Decoder PercivalData
@@ -23,7 +21,7 @@ decodeOpts =
         |> required "lang" string
 
 
-decodeDocDict : Decoder (Dict.Dict String Doc)
+decodeDocDict : Decoder DocDict
 decodeDocDict =
     dict decodeDoc
 
@@ -34,7 +32,7 @@ decodeDoc =
         |> required "name" string
 
 
-decodeBlockDict : Decoder (Dict.Dict String Block)
+decodeBlockDict : Decoder BlockDict
 decodeBlockDict =
     dict decodeBlock
 
@@ -46,7 +44,7 @@ decodeBlock =
         |> required "refs" decodeRefDict
 
 
-decodeRefDict : Decoder (Dict.Dict String Ref)
+decodeRefDict : Decoder RefDict
 decodeRefDict =
     dict decodeRef
 

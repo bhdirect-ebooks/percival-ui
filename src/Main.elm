@@ -4,8 +4,9 @@ import Decoders exposing (decodePercivalData)
 import Dict
 import Html
 import Http
-import Keyboard exposing (downs)
+import Keyboard.Combo
 import Types exposing (..)
+import UndoList exposing (UndoList)
 import Update exposing (..)
 import View exposing (viewOrError)
 
@@ -21,11 +22,15 @@ initialModel =
         , docs = Dict.fromList []
         , blocks = Dict.fromList []
         }
+    , blockState = UndoList.fresh (Dict.fromList [])
     , currentDocId = ""
     , currentRefId = ""
     , loadingError = Nothing
     , isSaving = False
     , inEditMode = False
+    , inHelp = False
+    , listedRefs = Nothing
+    , keys = Keyboard.Combo.init keyboardCombos ComboMsg
     }
 
 
@@ -38,8 +43,7 @@ initialCmd =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ downs KeyDown ]
+    Keyboard.Combo.subscriptions model.keys
 
 
 main : Program Never Model Msg
