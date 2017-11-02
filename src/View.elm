@@ -1,17 +1,15 @@
 module View exposing (..)
 
+import Array exposing (..)
 import Css exposing (..)
 import Css.Colors exposing (..)
 import Dict exposing (..)
-import Dom.Scroll exposing (toTop, toY)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (attribute, class, classList, href, id, src, style, type_)
 import Html.Events exposing (onClick, onWithOptions)
-import Html.Lazy exposing (lazy, lazy2, lazy3)
 import HtmlParser exposing (..)
 import HtmlParser.Util exposing (..)
 import Json.Decode as Json
-import Regex exposing (..)
 import Types exposing (..)
 import Utils exposing (..)
 
@@ -64,9 +62,9 @@ view model =
                     span [] []
     in
     div [ Attr.class "app-body" ]
-        [ lazy viewHelp model
-        , lazy viewMain model
-        , lazy viewMenu model
+        [ viewHelp model
+        , viewMain model
+        , viewMenu model
         , modalBackdrop
         ]
 
@@ -141,17 +139,28 @@ viewMain model =
     in
     main_
         [ Attr.class "main"
-        , styles [ marginRight (px 400) ]
+        , styles
+            [ marginRight (px 400)
+            , height (vh 100)
+            ]
         ]
-        [ lazy2 viewHeader model.isSaving docName
+        [ viewHeader model.isSaving docName
         , div
             [ styles [ marginTop (px 75) ]
-            , Attr.class "container-fluid"
+            , Attr.class "animated fadeIn container-fluid"
             ]
-            [ div [ Attr.class "animated fadeIn row" ]
+            [ div [ Attr.class "row" ]
                 [ div
                     [ Attr.class "col col-sm-12" ]
-                    [ div [ Attr.class "card pb-4" ]
+                    [ div
+                        [ styles
+                            [ position relative
+                            , maxHeight (calc (calc (vh 100) minus (px 75)) minus (Css.rem 1.5))
+                            , overflowY scroll
+                            ]
+                        , Attr.class "card pb-4"
+                        , Attr.id "title-doc"
+                        ]
                         currentBlockNodes
                     ]
                 ]
@@ -222,21 +231,6 @@ viewHeader isSaving docName =
         ]
 
 
-belongsToDoc : String -> String -> Bool
-belongsToDoc currentDocId blockKey =
-    let
-        docBlockRegex =
-            String.concat [ "^", currentDocId ]
-    in
-    contains (regex docBlockRegex) blockKey
-
-
-getDocBlocks : Model -> BlockDict
-getDocBlocks model =
-    model.blockState.present
-        |> Dict.filter (\k v -> belongsToDoc model.currentDocId k)
-
-
 viewBlock : String -> Block -> String -> Html Msg
 viewBlock blockId block currentRefId =
     let
@@ -253,19 +247,13 @@ viewBlock blockId block currentRefId =
 processNodes : List Node -> RefDict -> String -> ( List Node, RefDict )
 processNodes nodes refs currentRefId =
     let
-        processed =
+        ( processedNode, remainingRefs ) =
             case List.head nodes of
                 Nothing ->
                     ( Text "", refs )
 
                 Just node ->
                     processNode node refs currentRefId
-
-        processedNode =
-            Tuple.first processed
-
-        remainingRefs =
-            Tuple.second processed
     in
     case List.tail nodes of
         Nothing ->
@@ -273,14 +261,8 @@ processNodes nodes refs currentRefId =
 
         Just nodesTail ->
             let
-                processedSiblings =
+                ( siblingNodes, trueRemaining ) =
                     processNodes nodesTail remainingRefs currentRefId
-
-                siblingNodes =
-                    Tuple.first processedSiblings
-
-                trueRemaining =
-                    Tuple.second processedSiblings
             in
             ( List.concat [ [ processedNode ], siblingNodes ], trueRemaining )
 
@@ -321,14 +303,8 @@ processElement orig currentRefId tagName attrs children =
 getChildNodes : ( Node, RefDict ) -> String -> String -> Attributes -> List Node -> ( Node, RefDict )
 getChildNodes orig currentRefId tagName attrs children =
     let
-        processed =
+        ( processedNodes, remainingRefs ) =
             processNodes children (Tuple.second orig) currentRefId
-
-        processedNodes =
-            Tuple.first processed
-
-        remainingRefs =
-            Tuple.second processed
     in
     ( Element tagName attrs processedNodes, remainingRefs )
 
@@ -356,7 +332,7 @@ getRefNode refs currentRefId =
                 Just goodRef ->
                     if isInvalid goodRef then
                         "danger"
-                    else if isFullConf goodRef then
+                    else if isConfirmed goodRef then
                         "success"
                     else
                         "warning"
@@ -373,7 +349,7 @@ getRefNode refs currentRefId =
                                 String.concat
                                     [ "btn-outline-"
                                     , colorType
-                                    , " p-1 ref ref--highlighted"
+                                    , " p-1 ref ref--selected"
                                     ]
                             else
                                 String.concat
@@ -384,6 +360,7 @@ getRefNode refs currentRefId =
                     in
                     [ ( "class", classes )
                     , ( "id", refId )
+                    , ( "onclick", "reportRefId('" ++ refId ++ "')" )
                     ]
 
         children =
@@ -400,35 +377,6 @@ getRefNode refs currentRefId =
     ( node, remainingRefs )
 
 
-getDocRefs : Model -> List ( String, Ref )
-getDocRefs model =
-    let
-        blockList =
-            getDocBlocks model
-                |> Dict.values
-    in
-    List.map (\block -> block.refs |> Dict.toList) blockList
-        |> List.concat
-
-
-filterRefs : Maybe RefType -> List ( String, Ref ) -> List ( String, Ref )
-filterRefs mayRefType refTupList =
-    case mayRefType of
-        Nothing ->
-            refTupList
-
-        Just refType ->
-            case refType of
-                FullConf ->
-                    List.filter (\refTup -> isFullConf (Tuple.second refTup)) refTupList
-
-                LowConf ->
-                    List.filter (\refTup -> isLowConf (Tuple.second refTup)) refTupList
-
-                Invalid ->
-                    List.filter (\refTup -> isInvalid (Tuple.second refTup)) refTupList
-
-
 viewMenu : Model -> Html Msg
 viewMenu model =
     let
@@ -437,12 +385,10 @@ viewMenu model =
 
         docRefs =
             getDocRefs model
-
-        filteredRefs =
-            docRefs |> filterRefs model.listedRefs
+                |> Dict.fromList
 
         refList =
-            Dict.values (Dict.fromList docRefs)
+            Dict.values docRefs
     in
     aside
         [ Attr.class "aside-menu"
@@ -450,20 +396,23 @@ viewMenu model =
             [ Css.width (px 400)
             ]
         ]
-        [ lazy viewTypeNav refList
+        [ viewTypeNav refList
         , div
-            [ styles [ borderTopColor (rgba 170 170 170 1.0) ]
+            [ styles
+                [ borderTopColor (rgba 170 170 170 1.0)
+                , height (vh 100)
+                ]
             , Attr.class "tab-content"
             ]
             [ div
-                [ Attr.class "scripture-list"
+                [ Attr.id "scripture-list"
                 , styles
                     [ overflowY scroll
-                    , marginBottom (px 400)
-                    , Css.height (calc (pct 100) minus (px 430))
+                    , Css.height (calc (pct 100) minus (px 521))
+                    , position relative
                     ]
                 ]
-                (viewScriptureList model.currentRefId filteredRefs)
+                (viewScriptureList model docRefs)
             , div
                 [ Attr.class "action-panel p-3"
                 , styles
@@ -473,7 +422,7 @@ viewMenu model =
                     , Css.height (px 475)
                     , backgroundColor white
                     , borderTop3 (px 1) solid (rgba 170 170 170 1.0)
-                    , maxHeight (vh 60)
+                    , maxHeight (calc (vh 100) minus (px 46))
                     , overflowY scroll
                     ]
                 ]
@@ -488,14 +437,17 @@ viewTypeNav refList =
         styles =
             Css.asPairs >> Attr.style
 
-        fullConfCnt =
-            getRefCount FullConf refList
+        confCnt =
+            getRefCount (UserConf Confirmed) refList
 
         lowConfCnt =
-            getRefCount LowConf refList
+            getRefCount (RefConf NotFull) refList
 
         invalidCnt =
-            getRefCount Invalid refList
+            getRefCount (RefVal Invalid) refList
+
+        unconfCnt =
+            getRefCount (UserConf Unconfirmed) refList
 
         theHeight =
             styles [ Css.height (px 46) ]
@@ -507,31 +459,31 @@ viewTypeNav refList =
             ]
             [ div [ Attr.class "col col-3 mx-0 px-0" ]
                 [ div
-                    [ onClick (ShowRefs Nothing)
-                    , theHeight
-                    , Attr.class "callout callout-info my-0 py-0"
-                    ]
-                    [ Html.small [ Attr.class "text-muted" ]
-                        [ Html.text "Total" ]
-                    , br [] []
-                    , strong [] [ Html.text (toString (List.length refList)) ]
-                    ]
-                ]
-            , div [ Attr.class "col col-3 mx-0 px-0" ]
-                [ div
-                    [ onClick (ShowRefs (Just FullConf))
+                    [ onClick (ListRefsByType (Just (UserConf Confirmed)))
                     , theHeight
                     , Attr.class "callout callout-success my-0 py-0"
                     ]
                     [ Html.small [ Attr.class "text-muted" ]
                         [ Html.text "Confirmed" ]
                     , br [] []
-                    , strong [] [ Html.text (toString fullConfCnt) ]
+                    , strong [] [ Html.text (toString confCnt) ]
                     ]
                 ]
             , div [ Attr.class "col col-3 mx-0 px-0" ]
                 [ div
-                    [ onClick (ShowRefs (Just LowConf))
+                    [ onClick (ListRefsByType (Just (UserConf Unconfirmed)))
+                    , theHeight
+                    , Attr.class "callout my-0 py-0"
+                    ]
+                    [ Html.small [ Attr.class "text-muted" ]
+                        [ Html.text "Unconf" ]
+                    , br [] []
+                    , strong [] [ Html.text (toString unconfCnt) ]
+                    ]
+                ]
+            , div [ Attr.class "col col-3 mx-0 px-0" ]
+                [ div
+                    [ onClick (ListRefsByType (Just (RefConf NotFull)))
                     , theHeight
                     , Attr.class "callout callout-warning my-0 py-0"
                     ]
@@ -543,7 +495,7 @@ viewTypeNav refList =
                 ]
             , div [ Attr.class "col col-3 mx-0 px-0" ]
                 [ div
-                    [ onClick (ShowRefs (Just Invalid))
+                    [ onClick (ListRefsByType (Just (RefVal Invalid)))
                     , theHeight
                     , Attr.class "callout callout-danger my-0 py-0"
                     ]
@@ -557,8 +509,18 @@ viewTypeNav refList =
         ]
 
 
-viewScriptureList : String -> List ( String, Ref ) -> List (Html Msg)
-viewScriptureList currentRefId docRefs =
+getKeyValueIfInDict : RefId -> RefDict -> Maybe ( RefId, Ref )
+getKeyValueIfInDict refId refs =
+    case Dict.get refId refs of
+        Nothing ->
+            Nothing
+
+        Just ref ->
+            Just ( refId, ref )
+
+
+viewScriptureList : Model -> RefDict -> List (Html Msg)
+viewScriptureList model docRefs =
     let
         transHr =
             hr [ Attr.class "transparent mx-3 my-0" ] []
@@ -568,12 +530,15 @@ viewScriptureList currentRefId docRefs =
 
         beginList =
             [ div [ Attr.class "callout m-0 py-2 text-muted text-center bg-light text-uppercase" ]
-                [ Html.small [] [ b [] [ Html.text "Scripture Refs" ] ] ]
+                [ Html.small [] [ b [] [ Html.text "Scripture Ref List" ] ] ]
             , transHr
             ]
 
         refList =
-            List.map (\refTup -> lazy2 viewScriptureCallout currentRefId refTup) docRefs
+            model.listedRefIds
+                |> Array.toList
+                |> List.filterMap (\( k, v ) -> getKeyValueIfInDict k docRefs)
+                |> List.map (\refTup -> viewScriptureCallout model.currentRefId refTup)
                 |> List.intersperse grayHr
 
         endList =
@@ -585,17 +550,11 @@ viewScriptureList currentRefId docRefs =
     List.concat [ beginList, refList, endList ]
 
 
-viewScriptureCallout : String -> ( String, Ref ) -> Html Msg
-viewScriptureCallout currentRefId refTup =
+viewScriptureCallout : RefId -> ( RefId, Ref ) -> Html Msg
+viewScriptureCallout currentRefId ( refId, ref ) =
     let
-        ref =
-            Tuple.second refTup
-
-        refId =
-            Tuple.first refTup
-
         refListId =
-            "reflist-" ++ refId
+            getRefListId refId
 
         isCurrent =
             currentRefId == refId
@@ -603,7 +562,7 @@ viewScriptureCallout currentRefId refTup =
         colorType =
             if isInvalid ref then
                 "danger"
-            else if isFullConf ref then
+            else if isConfirmed ref then
                 "success"
             else
                 "warning"
@@ -632,7 +591,8 @@ viewScriptureCallout currentRefId refTup =
                 ref.data.scripture
     in
     div
-        [ calloutClassList
+        [ onClick (HandleListRefClick refId)
+        , calloutClassList
         , Attr.id refListId
         ]
         [ div [ Attr.class "container-fluid" ]
@@ -655,11 +615,11 @@ viewActionPanel model =
         styles =
             Css.asPairs >> Attr.style
     in
-    [ div [] [ viewListNav ] ]
+    [ div [] [ viewListNav (Array.length model.docRefIds) ] ]
 
 
-viewListNav : Html Msg
-viewListNav =
+viewListNav : Int -> Html Msg
+viewListNav refCnt =
     let
         styles =
             Css.asPairs >> Attr.style
@@ -674,32 +634,56 @@ viewListNav =
         , Attr.class "nav nav-tabs"
         ]
         [ li [ Attr.class "nav-item" ]
-            [ span [ Attr.class "nav-link" ]
-                [ i
-                    [ Attr.class "icon-control-start"
-                    , onClick ToPrevDoc
-                    ]
-                    []
+            [ span
+                [ Attr.class "nav-link"
+                , onClick (ToDoc Prev)
                 ]
+                [ i [ Attr.class "icon-control-start" ] [] ]
             ]
         , li [ Attr.class "nav-item" ]
-            [ span [ Attr.class "nav-link" ] [ i [ Attr.class "icon-arrow-left" ] [] ] ]
+            [ span
+                [ Attr.class "nav-link"
+                , onClick (ToRef Prev (Just Unconfirmed))
+                ]
+                [ i [ Attr.class "icon-arrow-left" ] [] ]
+            ]
         , li [ Attr.class "nav-item" ]
-            [ span [ Attr.class "nav-link" ] [ i [ Attr.class "icon-arrow-up" ] [] ] ]
+            [ span
+                [ Attr.class "nav-link"
+                , onClick (ToRef Prev Nothing)
+                ]
+                [ i [ Attr.class "icon-arrow-up" ] [] ]
+            ]
         , li
-            [ styles [ marginLeft auto ]
+            [ styles [ margin2 (pct 0) auto ]
             , Attr.class "nav-item"
             ]
-            [ span [ Attr.class "nav-link" ] [ i [ Attr.class "icon-arrow-down" ] [] ] ]
+            [ span
+                [ Attr.class "nav-link text-muted text-uppercase"
+                , onClick (ListRefsByType Nothing)
+                ]
+                [ Html.small [] [ b [] [ Html.text ("Total: " ++ toString refCnt) ] ] ]
+            ]
         , li [ Attr.class "nav-item" ]
-            [ span [ Attr.class "nav-link" ] [ i [ Attr.class "icon-arrow-right" ] [] ] ]
+            [ span
+                [ Attr.class "nav-link"
+                , onClick (ToRef Next Nothing)
+                ]
+                [ i [ Attr.class "icon-arrow-down" ] [] ]
+            ]
         , li [ Attr.class "nav-item" ]
-            [ span [ Attr.class "nav-link" ]
-                [ i
-                    [ Attr.class "icon-control-end"
-                    , onClick ToNextDoc
-                    ]
-                    []
+            [ span
+                [ Attr.class "nav-link"
+                , onClick (ToRef Next (Just Unconfirmed))
+                ]
+                [ i [ Attr.class "icon-arrow-right" ] [] ]
+            ]
+        , li [ Attr.class "nav-item" ]
+            [ span
+                [ Attr.class "nav-link"
+                , onClick (ToDoc Next)
+                ]
+                [ i [ Attr.class "icon-control-end" ] []
                 ]
             ]
         ]

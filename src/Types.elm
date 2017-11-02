@@ -1,6 +1,8 @@
 module Types exposing (..)
 
+import Array
 import Dict
+import Dom
 import Http
 import Keyboard.Combo
 import UndoList exposing (UndoList)
@@ -11,22 +13,39 @@ type NavDir
     | Next
 
 
-type RefType
-    = FullConf
-    | LowConf
+type Confidence
+    = NotFull
+    | Full
+
+
+type Confirmation
+    = Confirmed
+    | Unconfirmed
+
+
+type Validity
+    = Valid
     | Invalid
+
+
+type RefType
+    = RefConf Confidence
+    | RefVal Validity
+    | UserConf Confirmation
 
 
 type alias Model =
     { percivalData : PercivalData
     , blockState : UndoList BlockDict
     , currentDocId : String
-    , currentRefId : String
+    , currentRefId : RefId
     , loadingError : Maybe String
     , isSaving : Bool
     , inEditMode : Bool
     , inHelp : Bool
-    , listedRefs : Maybe RefType
+    , docRefIds : Array.Array ( RefId, Confirmation )
+    , selectedRefType : Maybe RefType
+    , listedRefIds : Array.Array ( RefId, Confirmation )
     , keys : Keyboard.Combo.Model Msg
     }
 
@@ -58,7 +77,7 @@ type alias BlockDict =
 
 
 type alias RefDict =
-    Dict.Dict String Ref
+    Dict.Dict RefId Ref
 
 
 type alias Doc =
@@ -87,13 +106,32 @@ type alias RefData =
     }
 
 
+type alias RefId =
+    String
+
+
+type alias ScrollList =
+    Bool
+
+
+type alias ScrollDoc =
+    Bool
+
+
+type alias RefSelectionData =
+    ( ScrollList, ScrollDoc )
+
+
 type Msg
     = DoNothing
+    | NoOp (Result Dom.Error ())
     | LoadData (Result Http.Error PercivalData)
     | ComboMsg Keyboard.Combo.Msg
     | Undo
     | Redo
     | ToggleHelp
-    | ToNextDoc
-    | ToPrevDoc
-    | ShowRefs (Maybe RefType)
+    | ListRefsByType (Maybe RefType)
+    | ToDoc NavDir
+    | ToRef NavDir (Maybe Confirmation)
+    | HandleBlockRefClick RefId
+    | HandleListRefClick RefId

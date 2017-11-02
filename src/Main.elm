@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import Array
 import Decoders exposing (decodePercivalData)
 import Dict
 import Html
@@ -8,6 +9,7 @@ import Keyboard.Combo
 import Types exposing (..)
 import UndoList exposing (UndoList)
 import Update exposing (..)
+import Utils exposing (clickedRef)
 import View exposing (viewOrError)
 
 
@@ -29,7 +31,9 @@ initialModel =
     , isSaving = False
     , inEditMode = False
     , inHelp = False
-    , listedRefs = Nothing
+    , docRefIds = Array.fromList []
+    , selectedRefType = Nothing
+    , listedRefIds = Array.fromList []
     , keys = Keyboard.Combo.init keyboardCombos ComboMsg
     }
 
@@ -43,7 +47,10 @@ initialCmd =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Keyboard.Combo.subscriptions model.keys
+    Sub.batch
+        [ Keyboard.Combo.subscriptions model.keys
+        , clickedRef HandleBlockRefClick
+        ]
 
 
 main : Program Never Model Msg
