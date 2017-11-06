@@ -43,10 +43,13 @@ type alias Model =
     , isSaving : Bool
     , inEditMode : Bool
     , inHelp : Bool
-    , docRefIds : Array.Array ( RefId, Confirmation )
+    , docRefIds : RefIdArray
     , selectedRefType : Maybe RefType
-    , listedRefIds : Array.Array ( RefId, Confirmation )
+    , listedRefIds : RefIdArray
     , keys : Keyboard.Combo.Model Msg
+    , viewAltRefs : Bool
+    , viewScriptureText : Bool
+    , scriptureText : String
     }
 
 
@@ -101,7 +104,7 @@ type alias RefData =
     , valid : Bool
     , message : String
     , confidence : Int
-    , possibile : List Osis
+    , possible : List Osis
     , confirmed : Bool
     }
 
@@ -118,8 +121,8 @@ type alias ScrollDoc =
     Bool
 
 
-type alias RefSelectionData =
-    ( ScrollList, ScrollDoc )
+type alias RefIdArray =
+    Array.Array ( RefId, Confirmation )
 
 
 type Msg
@@ -135,3 +138,9 @@ type Msg
     | ToRef NavDir (Maybe Confirmation)
     | HandleBlockRefClick RefId
     | HandleListRefClick RefId
+    | ToggleAltRefs
+    | SetScripText (Result Http.Error String)
+    | ShowScripture Osis
+    | HandlePostResponse (Result Http.Error Block)
+    | ConfirmRef
+    | ChangeOsis Osis

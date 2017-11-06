@@ -14,6 +14,11 @@ import Types exposing (..)
 import Utils exposing (..)
 
 
+styles : List Style -> Attribute msg
+styles =
+    Css.asPairs >> Attr.style
+
+
 onClickNoop : msg -> Attribute msg
 onClickNoop message =
     let
@@ -123,9 +128,6 @@ viewMain model =
             Dict.map (\k v -> viewBlock k v model.currentRefId) docBlocks
                 |> Dict.values
 
-        styles =
-            Css.asPairs >> Attr.style
-
         docName =
             Dict.get model.currentDocId model.percivalData.docs
                 |> (\doc ->
@@ -171,9 +173,6 @@ viewMain model =
 viewHeader : Bool -> String -> Html Msg
 viewHeader isSaving docName =
     let
-        styles =
-            Css.asPairs >> Attr.style
-
         whiteBg =
             styles [ backgroundColor white ]
 
@@ -380,9 +379,6 @@ getRefNode refs currentRefId =
 viewMenu : Model -> Html Msg
 viewMenu model =
     let
-        styles =
-            Css.asPairs >> Attr.style
-
         docRefs =
             getDocRefs model
                 |> Dict.fromList
@@ -408,25 +404,25 @@ viewMenu model =
                 [ Attr.id "scripture-list"
                 , styles
                     [ overflowY scroll
-                    , Css.height (calc (pct 100) minus (px 521))
+                    , Css.height (calc (pct 100) minus (px 561))
                     , position relative
                     ]
                 ]
-                (viewScriptureList model docRefs)
+                (viewScriptureList docRefs model)
             , div
                 [ Attr.class "action-panel p-3"
                 , styles
                     [ position fixed
                     , bottom (pct 0)
-                    , Css.width (pct 100)
-                    , Css.height (px 475)
+                    , Css.width (px 400)
+                    , Css.height (px 515)
+                    , minHeight (px 475)
                     , backgroundColor white
                     , borderTop3 (px 1) solid (rgba 170 170 170 1.0)
                     , maxHeight (calc (vh 100) minus (px 46))
-                    , overflowY scroll
                     ]
                 ]
-                (viewActionPanel model)
+                (viewActionPanel docRefs model)
             ]
         ]
 
@@ -434,9 +430,6 @@ viewMenu model =
 viewTypeNav : List Ref -> Html Msg
 viewTypeNav refList =
     let
-        styles =
-            Css.asPairs >> Attr.style
-
         confCnt =
             getRefCount (UserConf Confirmed) refList
 
@@ -519,8 +512,8 @@ getKeyValueIfInDict refId refs =
             Just ( refId, ref )
 
 
-viewScriptureList : Model -> RefDict -> List (Html Msg)
-viewScriptureList model docRefs =
+viewScriptureList : RefDict -> Model -> List (Html Msg)
+viewScriptureList docRefs model =
     let
         transHr =
             hr [ Attr.class "transparent mx-3 my-0" ] []
@@ -578,9 +571,6 @@ viewScriptureCallout currentRefId ( refId, ref ) =
                 , ( String.concat [ "alert-", colorType ], isCurrent )
                 ]
 
-        styles =
-            Css.asPairs >> Attr.style
-
         osisClasses =
             String.concat [ "col col-7 text-", colorType, " text-right i" ]
 
@@ -609,20 +599,31 @@ viewScriptureCallout currentRefId ( refId, ref ) =
         ]
 
 
-viewActionPanel : Model -> List (Html Msg)
-viewActionPanel model =
+viewActionPanel : RefDict -> Model -> List (Html Msg)
+viewActionPanel docRefs model =
     let
-        styles =
-            Css.asPairs >> Attr.style
+        currentRef =
+            Dict.get model.currentRefId docRefs
     in
-    [ div [] [ viewListNav (Array.length model.docRefIds) ] ]
+    [ div []
+        [ viewListNav (Array.length model.docRefIds)
+        , viewRefActions currentRef model
+        , viewRefContent currentRef model
+        ]
+    ]
 
 
 viewListNav : Int -> Html Msg
 viewListNav refCnt =
     let
-        styles =
-            Css.asPairs >> Attr.style
+        fsLg =
+            styles [ fontSize (Css.em 1.45) ]
+
+        fsSm =
+            styles
+                [ fontSize (Css.em 0.9)
+                , fontWeight bold
+                ]
     in
     ul
         [ styles
@@ -638,28 +639,28 @@ viewListNav refCnt =
                 [ Attr.class "nav-link"
                 , onClick (ToDoc Prev)
                 ]
-                [ i [ Attr.class "icon-control-start" ] [] ]
+                [ i [ Attr.class "icon-control-start text-muted", fsSm ] [] ]
             ]
         , li [ Attr.class "nav-item" ]
             [ span
                 [ Attr.class "nav-link"
                 , onClick (ToRef Prev (Just Unconfirmed))
                 ]
-                [ i [ Attr.class "icon-arrow-left" ] [] ]
+                [ i [ Attr.class "fa fa-angle-double-up text-muted", fsLg ] [] ]
             ]
         , li [ Attr.class "nav-item" ]
             [ span
                 [ Attr.class "nav-link"
                 , onClick (ToRef Prev Nothing)
                 ]
-                [ i [ Attr.class "icon-arrow-up" ] [] ]
+                [ i [ Attr.class "fa fa-angle-up text-muted", fsLg ] [] ]
             ]
         , li
             [ styles [ margin2 (pct 0) auto ]
             , Attr.class "nav-item"
             ]
             [ span
-                [ Attr.class "nav-link text-muted text-uppercase"
+                [ Attr.class "nav-link text-uppercase text-muted"
                 , onClick (ListRefsByType Nothing)
                 ]
                 [ Html.small [] [ b [] [ Html.text ("Total: " ++ toString refCnt) ] ] ]
@@ -669,21 +670,263 @@ viewListNav refCnt =
                 [ Attr.class "nav-link"
                 , onClick (ToRef Next Nothing)
                 ]
-                [ i [ Attr.class "icon-arrow-down" ] [] ]
+                [ i [ Attr.class "fa fa-angle-down text-muted", fsLg ] [] ]
             ]
         , li [ Attr.class "nav-item" ]
             [ span
                 [ Attr.class "nav-link"
                 , onClick (ToRef Next (Just Unconfirmed))
                 ]
-                [ i [ Attr.class "icon-arrow-right" ] [] ]
+                [ i [ Attr.class "fa fa-angle-double-down text-muted", fsLg ] [] ]
             ]
         , li [ Attr.class "nav-item" ]
             [ span
                 [ Attr.class "nav-link"
                 , onClick (ToDoc Next)
                 ]
-                [ i [ Attr.class "icon-control-end" ] []
+                [ i [ Attr.class "icon-control-end text-muted", fsSm ] [] ]
+            ]
+        ]
+
+
+viewRefActions : Maybe Ref -> Model -> Html Msg
+viewRefActions currentRef model =
+    case currentRef of
+        Nothing ->
+            div [] []
+
+        Just ref ->
+            let
+                invalid =
+                    isInvalid ref
+
+                colorType =
+                    if invalid then
+                        "danger"
+                    else if isConfirmed ref then
+                        "success"
+                    else
+                        "warning"
+
+                osisOrMessage =
+                    if invalid then
+                        ref.data.message
+                    else
+                        ref.data.scripture
+
+                confidence =
+                    ref.data.confidence * 10
+            in
+            div [ Attr.class "container-fluid m-0 p-0" ]
+                [ div [ Attr.class "row b mt-3 mb-1 pt-2 pb-0 text-uppercase" ]
+                    [ div [ Attr.class "col col-12" ]
+                        [ Html.text osisOrMessage
+                        , div [ Attr.class "progress progress-xs my-2" ]
+                            [ div
+                                [ attribute "aria-valuemax" "100"
+                                , attribute "aria-valuemin" "0"
+                                , attribute "aria-valuenow" (toString confidence)
+                                , Attr.class ("progress-bar bg-" ++ colorType)
+                                , attribute "role" "progressbar"
+                                , styles [ width (pct (toFloat confidence)) ]
+                                ]
+                                []
+                            ]
+                        ]
+                    ]
+                , div
+                    [ Attr.class "row text-muted"
+                    , styles
+                        [ fontSize (Css.rem 1.1)
+                        , overflow hidden
+                        ]
+                    ]
+                    [ div [ Attr.class "col col-2 pr-0" ]
+                        [ Html.small [] [ Html.text "Text:" ] ]
+                    , div
+                        [ Attr.class "col col-10 pl-0 d-inline-block text-truncate" ]
+                        [ Html.small [] [ Html.text ref.text ] ]
+                    ]
+                , viewActionButtons model.viewAltRefs ref.data
+                ]
+
+
+viewActionButtons : Bool -> RefData -> Html Msg
+viewActionButtons showAlt data =
+    let
+        ddButtonStyles =
+            styles
+                [ minWidth (px 80)
+                , maxWidth (px 196)
+                ]
+
+        altButton =
+            if not (List.isEmpty data.possible) then
+                if List.length data.possible == 1 then
+                    button
+                        [ Attr.class "btn btn-primary ml-2"
+                        , type_ "button"
+                        , ddButtonStyles
+                        ]
+                        [ Html.text
+                            (List.head data.possible
+                                |> (\osis ->
+                                        case osis of
+                                            Nothing ->
+                                                ""
+
+                                            Just osis ->
+                                                osis
+                                   )
+                            )
+                        ]
+                else
+                    viewDropdownButton showAlt data.possible
+            else
+                button
+                    [ Attr.class "btn btn-primary ml-2"
+                    , attribute "disabled" ""
+                    , type_ "button"
+                    , ddButtonStyles
+                    ]
+                    [ Html.text "Choose" ]
+    in
+    div [ Attr.class "row b mt-4" ]
+        [ div [ Attr.class "col col-12" ]
+            [ div
+                [ attribute "aria-label" "Actions"
+                , Attr.class "btn-group w-100"
+                , attribute "role" "group"
+                ]
+                [ button
+                    [ Attr.class "btn btn-success"
+                    , type_ "button"
+                    ]
+                    [ Html.text "Confirm" ]
+                , altButton
+                , button
+                    [ Attr.class "btn btn-outline-danger mr-1"
+                    , type_ "button"
+                    , styles [ marginLeft auto ]
+                    ]
+                    [ Html.text "Remove" ]
                 ]
             ]
         ]
+
+
+viewDropdownButton : Bool -> List Osis -> Html Msg
+viewDropdownButton showAlt alternates =
+    let
+        ariaExpanded =
+            if showAlt then
+                "true"
+            else
+                "false"
+    in
+    div
+        [ Attr.class "btn-group ml-2"
+        , attribute "role" "group"
+        , onClick ToggleAltRefs
+        , styles
+            [ minWidth (px 80)
+            , maxWidth (px 196)
+            , border (px 2)
+            ]
+        ]
+        [ button
+            [ attribute "aria-expanded" ariaExpanded
+            , attribute "aria-haspopup" "true"
+            , attribute "data-toggle" "dropdown"
+            , Attr.class "btn btn-primary dropdown-toggle"
+            , Attr.id "alt-group-drop"
+            , type_ "button"
+            ]
+            [ Html.text "Choose" ]
+        , div
+            [ attribute "aria-labelledby" "alt-group-drop"
+            , classList
+                [ ( "dropdown-menu", True )
+                , ( "show", showAlt )
+                ]
+            , styles
+                [ maxHeight (px 275)
+                , overflowY scroll
+                ]
+            ]
+            (List.map viewAlternate alternates)
+        ]
+
+
+viewAlternate : Osis -> Html Msg
+viewAlternate osis =
+    span
+        [ Attr.class "dropdown-item"
+        , onClick (ChangeOsis osis)
+        ]
+        [ Html.text osis ]
+
+
+viewRefContent : Maybe Ref -> Model -> Html Msg
+viewRefContent ref model =
+    case ref of
+        Nothing ->
+            div [] []
+
+        Just ref ->
+            let
+                invalid =
+                    isInvalid ref
+            in
+            if invalid then
+                div [] []
+            else if model.viewScriptureText then
+                div
+                    [ Attr.class "container ml-0"
+                    , styles [ height (pct 100) ]
+                    ]
+                    [ div [ Attr.class "row mt-4 mb-3" ]
+                        [ div
+                            [ Attr.class "col col-12 border border-left-0 border-right-0 border-bottom-0 pt-4 pb-2 px-0"
+                            , styles
+                                [ overflowY scroll
+                                , position relative
+                                , minHeight (px 255)
+                                , height (px 255)
+                                ]
+                            ]
+                            ([ div [ Attr.class "row" ]
+                                [ div [ Attr.class "col col-3 pr-0 pl-4 pt-1" ]
+                                    [ a
+                                        [ href "http://biblia.com/" ]
+                                        [ img
+                                            [ Attr.alt "Powered by Biblia"
+                                            , Attr.src "http://api.biblia.com/v1/PoweredByBiblia_small.png"
+                                            ]
+                                            []
+                                        ]
+                                    ]
+                                , div [ Attr.class "col col-7 pl-2" ]
+                                    [ Html.small [ Attr.class "text-muted" ]
+                                        [ Html.text "This site uses "
+                                        , a [ href "http://biblia.com/" ]
+                                            [ Html.text "Biblia" ]
+                                        , Html.text " web services from "
+                                        , a [ href "http://www.logos.com/" ]
+                                            [ Html.text "Logos Bible Software" ]
+                                        , Html.text "."
+                                        ]
+                                    ]
+                                ]
+                             ]
+                                |> List.append (toVirtualDom (parse model.scriptureText))
+                            )
+                        ]
+                    ]
+            else
+                button
+                    [ type_ "button"
+                    , Attr.class "btn btn-outline-primary mt-4"
+                    , onClick (ShowScripture ref.data.scripture)
+                    ]
+                    [ Html.text "View Passage" ]

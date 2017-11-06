@@ -63,5 +63,5 @@ decodeRefData =
         |> optional "valid" bool False
         |> optional "message" string ""
         |> optional "confidence" int 0
-        |> optional "possibile" (list string) []
+        |> optional "possible" (list string) []
         |> optional "confirmed" bool False

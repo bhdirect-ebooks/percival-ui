@@ -1,6 +1,6 @@
 module Update exposing (..)
 
-import Array
+import Dict exposing (..)
 import Keyboard.Combo
 import Types exposing (..)
 import UndoList exposing (UndoList)
@@ -72,10 +72,18 @@ update msg model =
                 model ! []
 
         Undo ->
-            { model | blockState = UndoList.undo model.blockState } ! []
+            { model
+                | blockState = UndoList.undo model.blockState
+                , viewAltRefs = False
+            }
+                ! []
 
         Redo ->
-            { model | blockState = UndoList.redo model.blockState } ! []
+            { model
+                | blockState = UndoList.redo model.blockState
+                , viewAltRefs = False
+            }
+                ! []
 
         ToggleHelp ->
             { model | inHelp = not model.inHelp } ! []
@@ -83,7 +91,10 @@ update msg model =
         ListRefsByType mayRefType ->
             let
                 newModel =
-                    { model | selectedRefType = mayRefType }
+                    if mayRefType == model.selectedRefType then
+                        { model | selectedRefType = Nothing }
+                    else
+                        { model | selectedRefType = mayRefType }
 
                 listedRefArray =
                     getListedRefArray newModel
@@ -103,6 +114,9 @@ update msg model =
                         { model
                             | currentDocId = selectedDoc
                             , selectedRefType = Nothing
+                            , viewAltRefs = False
+                            , viewScriptureText = False
+                            , scriptureText = ""
                         }
 
                     docRefArray =
@@ -138,19 +152,27 @@ update msg model =
             if model.currentRefId == selectedRef then
                 model ! []
             else
-                { model | currentRefId = selectedRef } ! [ scrollList refListId, scrollDoc blockId ]
+                { model
+                    | currentRefId = selectedRef
+                    , viewAltRefs = False
+                    , viewScriptureText = False
+                    , scriptureText = ""
+                }
+                    ! [ scrollList refListId, scrollDoc blockId ]
 
         HandleBlockRefClick refId ->
             let
                 isGoodRef =
-                    model.docRefIds
-                        |> Array.toList
-                        |> List.filter (\tup -> Tuple.first tup == refId)
-                        |> List.isEmpty
-                        |> not
+                    isInRefIdArray refId model.docRefIds
+
+                isListedRef =
+                    isInRefIdArray refId model.listedRefIds
 
                 newModel =
-                    { model | selectedRefType = Nothing }
+                    if isGoodRef && isListedRef then
+                        model
+                    else
+                        { model | selectedRefType = Nothing }
 
                 listedRefArray =
                     getListedRefArray newModel
@@ -159,7 +181,13 @@ update msg model =
                     getRefListId refId
             in
             if isGoodRef then
-                { newModel | currentRefId = refId } ! [ scrollList refListId ]
+                { newModel
+                    | currentRefId = refId
+                    , viewAltRefs = False
+                    , viewScriptureText = False
+                    , scriptureText = ""
+                }
+                    ! [ scrollList refListId ]
             else
                 model ! []
 
@@ -171,4 +199,77 @@ update msg model =
             if model.currentRefId == refId then
                 model ! []
             else
-                { model | currentRefId = refId } ! [ scrollDoc blockId ]
+                { model
+                    | currentRefId = refId
+                    , viewAltRefs = False
+                    , viewScriptureText = False
+                    , scriptureText = ""
+                }
+                    ! [ scrollDoc blockId ]
+
+        ToggleAltRefs ->
+            { model | viewAltRefs = not model.viewAltRefs } ! []
+
+        SetScripText (Err err) ->
+            let
+                _ =
+                    Debug.log "Err" err
+            in
+            model ! []
+
+        SetScripText (Ok html) ->
+            { model | scriptureText = html } ! []
+
+        ShowScripture osis ->
+            { model | viewScriptureText = True } ! [ fetchScripText osis ]
+
+        HandlePostResponse (Err err) ->
+            let
+                _ =
+                    Debug.log "Err" err
+            in
+            { model | isSaving = False } ! []
+
+        HandlePostResponse (Ok html) ->
+            { model | isSaving = False } ! []
+
+        ConfirmRef ->
+            let
+                
+            in
+
+            { model | }
+
+        ChangeOsis osis ->
+            let
+                blockId =
+                    getBlockIdFromRefId model.currentRefId
+
+                block =
+                    Dict.get blockId model.blockState.present
+
+                ref =
+                    case block of
+                        Nothing ->
+                            Nothing
+
+                        Just block ->
+                            Dict.get model.currentRefId block.refs
+            in
+            case block of
+                Nothing ->
+                    model ! []
+
+                Just block ->
+                    {- let
+                           newBlock =
+                               getBlockWithNewRef osis model.currentRefId block
+
+                           newBlockDict =
+                               Dict.update blockId (always (Just newBlock)) model.blockState
+
+                           newBlockState =
+                               UndoList.new newBlockDict model.blockState
+                       in
+                    -}
+                    model ! []

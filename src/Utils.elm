@@ -2,6 +2,9 @@ port module Utils exposing (..)
 
 import Array exposing (..)
 import Dict exposing (..)
+import Http exposing (..)
+import Json.Decode exposing (list, string)
+import Json.Encode as Encode
 import Regex exposing (..)
 import Types exposing (..)
 
@@ -16,6 +19,85 @@ port scrollDoc : String -> Cmd msg
 
 
 port backtoTop : Bool -> Cmd msg
+
+
+encodeRefData : RefData -> Encode.Value
+encodeRefData data =
+    Encode.object
+        [ ( "scripture", Encode.string data.scripture )
+        , ( "valid", Encode.bool data.valid )
+        , ( "message", Encode.string data.message )
+        , ( "confidence", Encode.int data.confidence )
+        , ( "possible"
+          , Encode.list
+                (data.possible
+                    |> List.map (\osis -> Encode.string osis)
+                )
+          )
+        , ( "confirmed", Encode.bool data.confirmed )
+        ]
+
+
+encodeRef : Ref -> Encode.Value
+encodeRef ref =
+    Encode.object
+        [ ( "text", Encode.string ref.text )
+        , ( "data", encodeRefData ref.data )
+        ]
+
+
+encodeRefsObj : RefDict -> Encode.Value
+encodeRefsObj refs =
+    Encode.object
+        (Dict.map (\refid ref -> encodeRef ref) refs
+            |> Dict.toList
+        )
+
+
+postBlock : String -> Block -> Http.Request (List String)
+postBlock blockId block =
+    let
+        blockObj =
+            Encode.object
+                [ ( "html", Encode.string block.html )
+                , ( "refs", encodeRefsObj block.refs )
+                ]
+
+        postUrl =
+            "http://localhost:7777/data/blocks/" ++ blockId
+    in
+    Http.post postUrl (Http.jsonBody blockObj) (list string)
+
+
+fetchScripText : Osis -> Cmd Msg
+fetchScripText osis =
+    Http.getString ("https://ygjutai0z5.execute-api.us-east-1.amazonaws.com/percival/" ++ osis)
+        |> Http.send SetScripText
+
+
+getOsisWithRefId : RefId -> BlockDict -> Osis
+getOsisWithRefId refId blocks =
+    let
+        blockId =
+            getBlockIdFromRefId refId
+    in
+    Dict.get blockId blocks
+        |> (\mayBlock ->
+                case mayBlock of
+                    Nothing ->
+                        ""
+
+                    Just block ->
+                        Dict.get refId block.refs
+                            |> (\mayRef ->
+                                    case mayRef of
+                                        Nothing ->
+                                            ""
+
+                                        Just ref ->
+                                            ref.data.scripture
+                               )
+           )
 
 
 getRefListId : RefId -> String
@@ -117,7 +199,7 @@ getNearbyDocId navDir model =
     getNearbyIdOfDict navDir model.currentDocId model.percivalData.docs
 
 
-getNearbyRefId : NavDir -> RefId -> Array ( RefId, Confirmation ) -> RefId
+getNearbyRefId : NavDir -> RefId -> RefIdArray -> RefId
 getNearbyRefId navDir currentRefId refTupArray =
     let
         refIdArr =
@@ -126,7 +208,7 @@ getNearbyRefId navDir currentRefId refTupArray =
     getNearbyIdOfArray navDir currentRefId refIdArr
 
 
-getNearbyUnconfId : NavDir -> RefId -> Array ( RefId, Confirmation ) -> RefId
+getNearbyUnconfId : NavDir -> RefId -> RefIdArray -> RefId
 getNearbyUnconfId navDir currentRefId refTupArray =
     let
         filteredRefIdArr =
@@ -218,7 +300,7 @@ toSimpleRefTup ( refId, ref ) =
     ( refId, confType )
 
 
-getDocRefArray : Model -> Array ( RefId, Confirmation )
+getDocRefArray : Model -> RefIdArray
 getDocRefArray model =
     getDocRefs model
         |> List.map toSimpleRefTup
@@ -252,9 +334,65 @@ filterRefs mayRefType refTupList =
                     List.filter (\( k, v ) -> not (isInvalid v)) refTupList
 
 
-getListedRefArray : Model -> Array ( RefId, Confirmation )
+getListedRefArray : Model -> RefIdArray
 getListedRefArray model =
     getDocRefs model
         |> filterRefs model.selectedRefType
         |> List.map toSimpleRefTup
         |> Array.fromList
+
+
+isInRefIdArray : RefId -> RefIdArray -> Bool
+isInRefIdArray refId refIdArray =
+    refIdArray
+        |> Array.toList
+        |> List.filter (\tup -> Tuple.first tup == refId)
+        |> List.isEmpty
+        |> not
+
+
+
+{-
+   getBlockWithNewRef : Osis -> RefId -> Block -> Block
+   getBlockWithNewRef osis refId block =
+       let
+           ref =
+               Dict.get refId block.refs
+       in
+       case ref of
+           Nothing ->
+               block
+
+           Just ref ->
+               let
+                   newAltList =
+                       ref.data.possible
+                           |> List.filter (\alt -> not (alt == osis))
+                           |> List.append [ ref.data.scripture ]
+
+                   newRef =
+                       { ref
+                           | data =
+                               { scripture = osis
+                               , valid = True
+                               , message = ""
+                               , confidence = 10
+                               , possible = newAltList
+                               , confirmed = True
+                               }
+                       }
+
+                   newRefDict =
+                       Dict.update refId (always (Just newRef)) block.refs
+
+                   newHtml =
+                       replaceRefTag osis ref
+
+                   newBlock =
+                       { block
+                           | html = newHtml
+                           , refs = newRefs
+                       }
+               in
+               []
+-}

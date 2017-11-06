@@ -35,6 +35,9 @@ initialModel =
     , selectedRefType = Nothing
     , listedRefIds = Array.fromList []
     , keys = Keyboard.Combo.init keyboardCombos ComboMsg
+    , viewAltRefs = False
+    , viewScriptureText = False
+    , scriptureText = ""
     }
 
 
