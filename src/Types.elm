@@ -31,12 +31,18 @@ type Validity
 type RefType
     = RefConf Confidence
     | RefVal Validity
+    | Confirm Confirmation
+
+
+type RefDataPoint
+    = Scripture Osis
+    | Possible (List Osis)
     | UserConf Confirmation
 
 
 type alias Model =
     { percivalData : PercivalData
-    , blockState : UndoList BlockDict
+    , blockState : UndoList State
     , currentDocId : String
     , currentRefId : RefId
     , loadingError : Maybe String
@@ -50,6 +56,12 @@ type alias Model =
     , viewAltRefs : Bool
     , viewScriptureText : Bool
     , scriptureText : String
+    }
+
+
+type alias State =
+    { changedBlockId : String
+    , blocks : BlockDict
     }
 
 

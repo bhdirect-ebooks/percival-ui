@@ -24,7 +24,11 @@ initialModel =
         , docs = Dict.fromList []
         , blocks = Dict.fromList []
         }
-    , blockState = UndoList.fresh (Dict.fromList [])
+    , blockState =
+        UndoList.fresh
+            { changedBlockId = ""
+            , blocks = Dict.fromList []
+            }
     , currentDocId = ""
     , currentRefId = ""
     , loadingError = Nothing

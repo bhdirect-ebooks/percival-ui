@@ -41,7 +41,7 @@ update msg model =
                 newModel =
                     { model
                         | percivalData = data
-                        , blockState = UndoList.fresh data.blocks
+                        , blockState = UndoList.fresh { changedBlockId = "", blocks = data.blocks }
                         , currentDocId = getFirstIdOfDict data.docs
                     }
 
@@ -72,18 +72,64 @@ update msg model =
                 model ! []
 
         Undo ->
-            { model
-                | blockState = UndoList.undo model.blockState
-                , viewAltRefs = False
-            }
-                ! []
+            if UndoList.hasPast model.blockState then
+                let
+                    newState =
+                        UndoList.undo model.blockState
+
+                    blockId =
+                        model.blockState.present.changedBlockId
+
+                    block =
+                        Dict.get blockId newState.present.blocks
+                in
+                case block of
+                    Nothing ->
+                        { model
+                            | blockState = newState
+                            , viewAltRefs = False
+                        }
+                            ! []
+
+                    Just block ->
+                        { model
+                            | blockState = newState
+                            , viewAltRefs = False
+                            , isSaving = True
+                        }
+                            ! [ postBlock blockId block ]
+            else
+                model ! []
 
         Redo ->
-            { model
-                | blockState = UndoList.redo model.blockState
-                , viewAltRefs = False
-            }
-                ! []
+            if UndoList.hasFuture model.blockState then
+                let
+                    newState =
+                        UndoList.redo model.blockState
+
+                    blockId =
+                        newState.present.changedBlockId
+
+                    block =
+                        Dict.get blockId newState.present.blocks
+                in
+                case block of
+                    Nothing ->
+                        { model
+                            | blockState = newState
+                            , viewAltRefs = False
+                        }
+                            ! []
+
+                    Just block ->
+                        { model
+                            | blockState = newState
+                            , viewAltRefs = False
+                            , isSaving = True
+                        }
+                            ! [ postBlock blockId block ]
+            else
+                model ! []
 
         ToggleHelp ->
             { model | inHelp = not model.inHelp } ! []
@@ -235,10 +281,37 @@ update msg model =
 
         ConfirmRef ->
             let
-                
-            in
+                blockId =
+                    getBlockIdFromRefId model.currentRefId
 
-            { model | }
+                block =
+                    Dict.get blockId model.blockState.present.blocks
+            in
+            case block of
+                Nothing ->
+                    model ! []
+
+                Just block ->
+                    let
+                        newBlock =
+                            updateBlockRef model.currentRefId (UserConf Confirmed) block
+
+                        newBlockDict =
+                            model.blockState.present.blocks
+                                |> Dict.update blockId (always (Just newBlock))
+
+                        newBlockState =
+                            model.blockState
+                                |> UndoList.new
+                                    { changedBlockId = blockId
+                                    , blocks = newBlockDict
+                                    }
+                    in
+                    { model
+                        | blockState = newBlockState
+                        , isSaving = True
+                    }
+                        ! [ postBlock blockId newBlock ]
 
         ChangeOsis osis ->
             let
@@ -246,7 +319,7 @@ update msg model =
                     getBlockIdFromRefId model.currentRefId
 
                 block =
-                    Dict.get blockId model.blockState.present
+                    Dict.get blockId model.blockState.present.blocks
 
                 ref =
                     case block of

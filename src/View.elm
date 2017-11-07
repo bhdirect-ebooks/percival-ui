@@ -431,7 +431,7 @@ viewTypeNav : List Ref -> Html Msg
 viewTypeNav refList =
     let
         confCnt =
-            getRefCount (UserConf Confirmed) refList
+            getRefCount (Confirm Confirmed) refList
 
         lowConfCnt =
             getRefCount (RefConf NotFull) refList
@@ -440,7 +440,7 @@ viewTypeNav refList =
             getRefCount (RefVal Invalid) refList
 
         unconfCnt =
-            getRefCount (UserConf Unconfirmed) refList
+            getRefCount (Confirm Unconfirmed) refList
 
         theHeight =
             styles [ Css.height (px 46) ]
@@ -452,7 +452,7 @@ viewTypeNav refList =
             ]
             [ div [ Attr.class "col col-3 mx-0 px-0" ]
                 [ div
-                    [ onClick (ListRefsByType (Just (UserConf Confirmed)))
+                    [ onClick (ListRefsByType (Just (Confirm Confirmed)))
                     , theHeight
                     , Attr.class "callout callout-success my-0 py-0"
                     ]
@@ -464,7 +464,7 @@ viewTypeNav refList =
                 ]
             , div [ Attr.class "col col-3 mx-0 px-0" ]
                 [ div
-                    [ onClick (ListRefsByType (Just (UserConf Unconfirmed)))
+                    [ onClick (ListRefsByType (Just (Confirm Unconfirmed)))
                     , theHeight
                     , Attr.class "callout my-0 py-0"
                     ]
@@ -760,8 +760,19 @@ viewActionButtons showAlt data =
                 , maxWidth (px 196)
                 ]
 
+        confButton =
+            if data.confirmed then
+                span [] []
+            else
+                button
+                    [ Attr.class "btn btn-success"
+                    , type_ "button"
+                    , onClick ConfirmRef
+                    ]
+                    [ Html.text "Confirm" ]
+
         altButton =
-            if not (List.isEmpty data.possible) then
+            if not (List.isEmpty data.possible) && not data.confirmed then
                 if List.length data.possible == 1 then
                     button
                         [ Attr.class "btn btn-primary ml-2"
@@ -783,13 +794,7 @@ viewActionButtons showAlt data =
                 else
                     viewDropdownButton showAlt data.possible
             else
-                button
-                    [ Attr.class "btn btn-primary ml-2"
-                    , attribute "disabled" ""
-                    , type_ "button"
-                    , ddButtonStyles
-                    ]
-                    [ Html.text "Choose" ]
+                span [] []
     in
     div [ Attr.class "row b mt-4" ]
         [ div [ Attr.class "col col-12" ]
@@ -798,11 +803,7 @@ viewActionButtons showAlt data =
                 , Attr.class "btn-group w-100"
                 , attribute "role" "group"
                 ]
-                [ button
-                    [ Attr.class "btn btn-success"
-                    , type_ "button"
-                    ]
-                    [ Html.text "Confirm" ]
+                [ confButton
                 , altButton
                 , button
                     [ Attr.class "btn btn-outline-danger mr-1"

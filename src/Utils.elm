@@ -1,9 +1,9 @@
 port module Utils exposing (..)
 
 import Array exposing (..)
+import Decoders exposing (decodeBlock)
 import Dict exposing (..)
 import Http exposing (..)
-import Json.Decode exposing (list, string)
 import Json.Encode as Encode
 import Regex exposing (..)
 import Types exposing (..)
@@ -54,7 +54,7 @@ encodeRefsObj refs =
         )
 
 
-postBlock : String -> Block -> Http.Request (List String)
+postBlock : String -> Block -> Cmd Msg
 postBlock blockId block =
     let
         blockObj =
@@ -66,7 +66,8 @@ postBlock blockId block =
         postUrl =
             "http://localhost:7777/data/blocks/" ++ blockId
     in
-    Http.post postUrl (Http.jsonBody blockObj) (list string)
+    Http.post postUrl (Http.jsonBody blockObj) decodeBlock
+        |> Http.send HandlePostResponse
 
 
 fetchScripText : Osis -> Cmd Msg
@@ -121,7 +122,7 @@ belongsToDoc currentDocId blockKey =
 
 getDocBlocks : Model -> BlockDict
 getDocBlocks model =
-    model.blockState.present
+    model.blockState.present.blocks
         |> Dict.filter (\k v -> belongsToDoc model.currentDocId k)
 
 
@@ -259,10 +260,10 @@ getRefCount refType refList =
     let
         filtered =
             case refType of
-                UserConf Confirmed ->
+                Confirm Confirmed ->
                     List.filter (\ref -> isConfirmed ref) refList
 
-                UserConf Unconfirmed ->
+                Confirm Unconfirmed ->
                     List.filter (\ref -> isUnconfirmed ref) refList
 
                 RefConf NotFull ->
@@ -315,10 +316,10 @@ filterRefs mayRefType refTupList =
 
         Just refType ->
             case refType of
-                UserConf Confirmed ->
+                Confirm Confirmed ->
                     List.filter (\( k, v ) -> isConfirmed v) refTupList
 
-                UserConf Unconfirmed ->
+                Confirm Unconfirmed ->
                     List.filter (\( k, v ) -> isUnconfirmed v) refTupList
 
                 RefConf NotFull ->
@@ -349,6 +350,85 @@ isInRefIdArray refId refIdArray =
         |> List.filter (\tup -> Tuple.first tup == refId)
         |> List.isEmpty
         |> not
+
+
+updateBlockRef : RefId -> RefDataPoint -> Block -> Block
+updateBlockRef refId refDP block =
+    let
+        ref =
+            Dict.get refId block.refs
+    in
+    case ref of
+        Nothing ->
+            block
+
+        Just ref ->
+            let
+                origTagRegex =
+                    regex
+                        ("<a data-cross-ref='{\"scripture\":\""
+                            ++ ref.data.scripture
+                            ++ "[^}]+}'>"
+                            ++ ref.text
+                            ++ "</a>"
+                        )
+
+                newRef =
+                    updateRefData ref refDP
+
+                newRefDict =
+                    block.refs
+                        |> Dict.update refId (always (Just newRef))
+
+                newTag =
+                    Encode.encode 0 (encodeRefData newRef.data)
+
+                newHtml =
+                    block.html
+                        |> replace (AtMost 1) origTagRegex (\_ -> newTag)
+            in
+            { block | html = newHtml, refs = newRefDict }
+
+
+updateRefData : Ref -> RefDataPoint -> Ref
+updateRefData ref refDP =
+    let
+        data =
+            ref.data
+
+        newData =
+            case refDP of
+                Scripture osis ->
+                    { data
+                        | scripture = osis
+                        , valid = True
+                        , message = ""
+                        , confidence = 10
+                        , confirmed = True
+                    }
+
+                Possible altList ->
+                    { data | possible = altList }
+
+                UserConf userConf ->
+                    let
+                        confirmation =
+                            case userConf of
+                                Confirmed ->
+                                    True
+
+                                Unconfirmed ->
+                                    False
+                    in
+                    if confirmation then
+                        { data
+                            | confidence = 10
+                            , confirmed = confirmation
+                        }
+                    else
+                        { data | confirmed = confirmation }
+    in
+    { ref | data = newData }
 
 
 
