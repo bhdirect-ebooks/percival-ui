@@ -6,7 +6,7 @@ import Css.Colors exposing (..)
 import Dict exposing (..)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (attribute, class, classList, href, id, src, style, type_)
-import Html.Events exposing (onClick, onWithOptions)
+import Html.Events exposing (keyCode, on, onBlur, onClick, onDoubleClick, onInput, onWithOptions)
 import HtmlParser exposing (..)
 import HtmlParser.Util exposing (..)
 import Json.Decode as Json
@@ -28,6 +28,18 @@ onClickNoop message =
             }
     in
     onWithOptions "click" options (Json.succeed message)
+
+
+onEnter : Msg -> Attribute Msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                Json.succeed msg
+            else
+                Json.fail "not ENTER"
+    in
+    on "keydown" (Json.andThen isEnter keyCode)
 
 
 viewOrError : Model -> Html Msg
@@ -718,9 +730,9 @@ viewRefActions currentRef model =
                     ref.data.confidence * 10
             in
             div [ Attr.class "container-fluid m-0 p-0" ]
-                [ div [ Attr.class "row b mt-3 mb-1 pt-2 pb-0 text-uppercase" ]
+                [ div [ Attr.class "row mt-3 mb-1 pt-2 pb-0" ]
                     [ div [ Attr.class "col col-12" ]
-                        [ Html.text osisOrMessage
+                        [ viewOsisField model
                         , div [ Attr.class "progress progress-xs my-2" ]
                             [ div
                                 [ attribute "aria-valuemax" "100"
@@ -747,54 +759,66 @@ viewRefActions currentRef model =
                         [ Attr.class "col col-10 pl-0 d-inline-block text-truncate" ]
                         [ Html.small [] [ Html.text ref.text ] ]
                     ]
-                , viewActionButtons model.viewAltRefs ref.data
+                , viewActionButtons model ref.data
                 ]
 
 
-viewActionButtons : Bool -> RefData -> Html Msg
-viewActionButtons showAlt data =
+viewOsisField : Model -> Html Msg
+viewOsisField { editingOsis, osisField } =
     let
-        ddButtonStyles =
-            styles
-                [ minWidth (px 80)
-                , maxWidth (px 196)
-                ]
-
-        confButton =
-            if data.confirmed then
-                span [] []
+        editClasses =
+            if osisField == "" then
+                Attr.class "b text-uppercase w-100 no-no"
             else
-                button
-                    [ Attr.class "btn btn-success"
-                    , type_ "button"
-                    , onClick ConfirmRef
-                    ]
-                    [ Html.text "Confirm" ]
+                Attr.class "b text-uppercase w-100"
+
+        attrs =
+            if editingOsis then
+                [ editClasses
+                , Attr.value osisField
+                , Attr.name "osis"
+                , Attr.id "osis-field"
+                , onInput UpdateField
+                , onBlur ChangeOsis
+                , onEnter ChangeOsis
+                , styles [ color (hex "29363d") ]
+                ]
+            else
+                [ Attr.class "border-0 b text-uppercase"
+                , Attr.value osisField
+                , Attr.name "osis"
+                , Attr.id "osis-field"
+                , onDoubleClick EditOsis
+                , Attr.readonly True
+                , styles [ color (hex "29363d") ]
+                ]
+    in
+    input attrs []
+
+
+viewActionButtons : Model -> RefData -> Html Msg
+viewActionButtons { viewAltRefs, inEditMode } data =
+    let
+        confAttr =
+            if data.confirmed || not data.valid || inEditMode then
+                Attr.disabled True
+            else
+                onClick (ChangeRefData (UserConf Confirmed))
 
         altButton =
-            if not (List.isEmpty data.possible) && not data.confirmed then
+            if data.valid && not (List.isEmpty data.possible) then
                 if List.length data.possible == 1 then
-                    button
-                        [ Attr.class "btn btn-primary ml-2"
-                        , type_ "button"
-                        , ddButtonStyles
-                        ]
-                        [ Html.text
-                            (List.head data.possible
-                                |> (\osis ->
-                                        case osis of
-                                            Nothing ->
-                                                ""
-
-                                            Just osis ->
-                                                osis
-                                   )
-                            )
-                        ]
+                    viewSingleAltButton data.possible
                 else
-                    viewDropdownButton showAlt data.possible
+                    viewDropdownButton viewAltRefs data.possible
             else
                 span [] []
+
+        rmvAttr =
+            if inEditMode then
+                Attr.disabled True
+            else
+                onClick (ChangeRefData Remove)
     in
     div [ Attr.class "row b mt-4" ]
         [ div [ Attr.class "col col-12" ]
@@ -803,16 +827,46 @@ viewActionButtons showAlt data =
                 , Attr.class "btn-group w-100"
                 , attribute "role" "group"
                 ]
-                [ confButton
+                [ button
+                    [ Attr.class "btn btn-success"
+                    , type_ "button"
+                    , confAttr
+                    ]
+                    [ Html.text "Confirm" ]
                 , altButton
                 , button
                     [ Attr.class "btn btn-outline-danger mr-1"
                     , type_ "button"
                     , styles [ marginLeft auto ]
+                    , rmvAttr
                     ]
                     [ Html.text "Remove" ]
                 ]
             ]
+        ]
+
+
+viewSingleAltButton : List Osis -> Html Msg
+viewSingleAltButton possible =
+    button
+        [ Attr.class "btn btn-outline-primary ml-2"
+        , type_ "button"
+        , styles
+            [ minWidth (px 80)
+            , maxWidth (px 196)
+            ]
+        ]
+        [ Html.text
+            (List.head possible
+                |> (\osis ->
+                        case osis of
+                            Nothing ->
+                                ""
+
+                            Just osis ->
+                                osis
+                   )
+            )
         ]
 
 
@@ -839,7 +893,7 @@ viewDropdownButton showAlt alternates =
             [ attribute "aria-expanded" ariaExpanded
             , attribute "aria-haspopup" "true"
             , attribute "data-toggle" "dropdown"
-            , Attr.class "btn btn-primary dropdown-toggle"
+            , Attr.class "btn btn-outline-primary dropdown-toggle"
             , Attr.id "alt-group-drop"
             , type_ "button"
             ]
@@ -863,7 +917,7 @@ viewAlternate : Osis -> Html Msg
 viewAlternate osis =
     span
         [ Attr.class "dropdown-item"
-        , onClick (ChangeOsis osis)
+        , onClick (ChangeRefData (Scripture osis))
         ]
         [ Html.text osis ]
 
@@ -927,7 +981,7 @@ viewRefContent ref model =
             else
                 button
                     [ type_ "button"
-                    , Attr.class "btn btn-outline-primary mt-4"
+                    , Attr.class "btn btn-outline-secondary mt-4"
                     , onClick (ShowScripture ref.data.scripture)
                     ]
                     [ Html.text "View Passage" ]

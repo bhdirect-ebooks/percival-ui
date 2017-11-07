@@ -36,8 +36,15 @@ type RefType
 
 type RefDataPoint
     = Scripture Osis
-    | Possible (List Osis)
     | UserConf Confirmation
+    | Remove
+
+
+type alias RefStuff =
+    { refId : RefId
+    , ref : Ref
+    , refDP : RefDataPoint
+    }
 
 
 type alias Model =
@@ -45,6 +52,8 @@ type alias Model =
     , blockState : UndoList State
     , currentDocId : String
     , currentRefId : RefId
+    , editingOsis : Bool
+    , osisField : String
     , loadingError : Maybe String
     , isSaving : Bool
     , inEditMode : Bool
@@ -102,6 +111,7 @@ type alias Doc =
 type alias Block =
     { html : String
     , refs : RefDict
+    , isEditing : Bool
     }
 
 
@@ -154,5 +164,8 @@ type Msg
     | SetScripText (Result Http.Error String)
     | ShowScripture Osis
     | HandlePostResponse (Result Http.Error Block)
-    | ConfirmRef
-    | ChangeOsis Osis
+    | ChangeRefData RefDataPoint
+    | EditOsis
+    | UpdateField String
+    | ChangeOsis
+    | HandleParserResponse String

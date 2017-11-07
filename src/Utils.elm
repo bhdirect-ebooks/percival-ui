@@ -96,7 +96,10 @@ getOsisWithRefId refId blocks =
                                             ""
 
                                         Just ref ->
-                                            ref.data.scripture
+                                            if ref.data.valid then
+                                                ref.data.scripture
+                                            else
+                                                ref.data.message
                                )
            )
 
@@ -352,6 +355,44 @@ isInRefIdArray refId refIdArray =
         |> not
 
 
+getUpdatedBlock : Regex -> RefStuff -> Block -> Block
+getUpdatedBlock origTagRegex { refId, ref, refDP } block =
+    case refDP of
+        Remove ->
+            let
+                newRefDict =
+                    block.refs
+                        |> Dict.remove refId
+
+                newHtml =
+                    block.html
+                        |> replace (AtMost 1) origTagRegex (\_ -> ref.text)
+            in
+            { block | html = newHtml, refs = newRefDict }
+
+        _ ->
+            let
+                newRef =
+                    updateRefData ref refDP
+
+                newRefDict =
+                    block.refs
+                        |> Dict.update refId (always (Just newRef))
+
+                newTag =
+                    "<a data-cross-ref='"
+                        ++ Encode.encode 0 (encodeRefData newRef.data)
+                        ++ "'>"
+                        ++ ref.text
+                        ++ "</a>"
+
+                newHtml =
+                    block.html
+                        |> replace (AtMost 1) origTagRegex (\_ -> newTag)
+            in
+            { block | html = newHtml, refs = newRefDict }
+
+
 updateBlockRef : RefId -> RefDataPoint -> Block -> Block
 updateBlockRef refId refDP block =
     let
@@ -366,28 +407,47 @@ updateBlockRef refId refDP block =
             let
                 origTagRegex =
                     regex
-                        ("<a data-cross-ref='{\"scripture\":\""
+                        ("<a data-cross-ref=(?:\"|'){(?:&quot;|\")scripture(?:&quot;|\"):(?:&quot;|\")"
                             ++ ref.data.scripture
-                            ++ "[^}]+}'>"
-                            ++ ref.text
+                            ++ "[^}]+}\">"
+                            ++ escape ref.text
                             ++ "</a>"
                         )
 
-                newRef =
-                    updateRefData ref refDP
-
-                newRefDict =
-                    block.refs
-                        |> Dict.update refId (always (Just newRef))
-
-                newTag =
-                    Encode.encode 0 (encodeRefData newRef.data)
-
-                newHtml =
-                    block.html
-                        |> replace (AtMost 1) origTagRegex (\_ -> newTag)
+                refStuff =
+                    { refId = refId
+                    , ref = ref
+                    , refDP = refDP
+                    }
             in
-            { block | html = newHtml, refs = newRefDict }
+            getUpdatedBlock origTagRegex refStuff block
+
+
+getRevisedAltList : Osis -> RefData -> List Osis
+getRevisedAltList newOsis data =
+    let
+        currentOsis =
+            data.scripture
+    in
+    if not (currentOsis == "") then
+        if List.member newOsis data.possible then
+            if List.member currentOsis data.possible then
+                data.possible
+                    |> List.filter (\altOsis -> not (altOsis == newOsis))
+            else
+                data.possible
+                    |> List.map
+                        (\altOsis ->
+                            if altOsis == newOsis then
+                                currentOsis
+                            else
+                                altOsis
+                        )
+        else
+            data.possible
+                |> List.append [ currentOsis ]
+    else
+        data.possible
 
 
 updateRefData : Ref -> RefDataPoint -> Ref
@@ -399,16 +459,17 @@ updateRefData ref refDP =
         newData =
             case refDP of
                 Scripture osis ->
+                    let
+                        altList =
+                            getRevisedAltList osis data
+                    in
                     { data
                         | scripture = osis
                         , valid = True
                         , message = ""
-                        , confidence = 10
                         , confirmed = True
+                        , possible = altList
                     }
-
-                Possible altList ->
-                    { data | possible = altList }
 
                 UserConf userConf ->
                     let
@@ -420,59 +481,9 @@ updateRefData ref refDP =
                                 Unconfirmed ->
                                     False
                     in
-                    if confirmation then
-                        { data
-                            | confidence = 10
-                            , confirmed = confirmation
-                        }
-                    else
-                        { data | confirmed = confirmation }
+                    { data | confirmed = confirmation }
+
+                _ ->
+                    data
     in
     { ref | data = newData }
-
-
-
-{-
-   getBlockWithNewRef : Osis -> RefId -> Block -> Block
-   getBlockWithNewRef osis refId block =
-       let
-           ref =
-               Dict.get refId block.refs
-       in
-       case ref of
-           Nothing ->
-               block
-
-           Just ref ->
-               let
-                   newAltList =
-                       ref.data.possible
-                           |> List.filter (\alt -> not (alt == osis))
-                           |> List.append [ ref.data.scripture ]
-
-                   newRef =
-                       { ref
-                           | data =
-                               { scripture = osis
-                               , valid = True
-                               , message = ""
-                               , confidence = 10
-                               , possible = newAltList
-                               , confirmed = True
-                               }
-                       }
-
-                   newRefDict =
-                       Dict.update refId (always (Just newRef)) block.refs
-
-                   newHtml =
-                       replaceRefTag osis ref
-
-                   newBlock =
-                       { block
-                           | html = newHtml
-                           , refs = newRefs
-                       }
-               in
-               []
--}

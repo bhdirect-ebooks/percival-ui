@@ -31,6 +31,8 @@ initialModel =
             }
     , currentDocId = ""
     , currentRefId = ""
+    , editingOsis = False
+    , osisField = ""
     , loadingError = Nothing
     , isSaving = False
     , inEditMode = False

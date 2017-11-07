@@ -42,6 +42,7 @@ decodeBlock =
     decode Block
         |> required "html" string
         |> required "refs" decodeRefDict
+        |> hardcoded False
 
 
 decodeRefDict : Decoder RefDict
