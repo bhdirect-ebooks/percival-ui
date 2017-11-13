@@ -42,7 +42,6 @@ decodeBlock =
     decode Block
         |> required "html" string
         |> required "refs" decodeRefDict
-        |> hardcoded False
 
 
 decodeRefDict : Decoder RefDict
@@ -66,3 +65,15 @@ decodeRefData =
         |> optional "confidence" int 0
         |> optional "possible" (list string) []
         |> optional "confirmed" bool False
+
+
+decodeMessages : Decoder Messages
+decodeMessages =
+    decode Messages
+        |> required "messages" (list decodeValidatorMessage)
+
+
+decodeValidatorMessage : Decoder ValidatorMessage
+decodeValidatorMessage =
+    decode ValidatorMessage
+        |> required "message" string

@@ -8,6 +8,11 @@ import Keyboard.Combo
 import UndoList exposing (UndoList)
 
 
+type EditorTheme
+    = Dark
+    | Light
+
+
 type NavDir
     = Prev
     | Next
@@ -37,6 +42,7 @@ type RefType
 type RefDataPoint
     = Scripture Osis
     | UserConf Confirmation
+    | UserVal Validity String
     | Remove
 
 
@@ -54,6 +60,13 @@ type alias Model =
     , currentRefId : RefId
     , editingOsis : Bool
     , osisField : String
+    , badInput : Bool
+    , htmlSource : String
+    , editingBlockId : String
+    , editorActive : Bool
+    , editorTheme : EditorTheme
+    , isValidating : Bool
+    , htmlValidation : List String
     , loadingError : Maybe String
     , isSaving : Bool
     , inEditMode : Bool
@@ -111,7 +124,6 @@ type alias Doc =
 type alias Block =
     { html : String
     , refs : RefDict
-    , isEditing : Bool
     }
 
 
@@ -147,6 +159,14 @@ type alias RefIdArray =
     Array.Array ( RefId, Confirmation )
 
 
+type alias Messages =
+    { messages : List ValidatorMessage }
+
+
+type alias ValidatorMessage =
+    { message : String }
+
+
 type Msg
     = DoNothing
     | NoOp (Result Dom.Error ())
@@ -168,4 +188,13 @@ type Msg
     | EditOsis
     | UpdateField String
     | ChangeOsis
-    | HandleParserResponse String
+    | HandleParserResponse (Result Http.Error RefData)
+    | AddContextToBlock
+    | EditBlock String
+    | UpdateSource String
+    | ToggleEditorTheme
+    | CancelHtml
+    | RevertHtml
+    | SubmitHtml
+    | HandleMessages (Result Http.Error Messages)
+    | HandlePostHtml (Result Http.Error Block)

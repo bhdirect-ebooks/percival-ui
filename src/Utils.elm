@@ -1,7 +1,7 @@
 port module Utils exposing (..)
 
 import Array exposing (..)
-import Decoders exposing (decodeBlock)
+import Decoders exposing (decodeBlock, decodeMessages, decodeRefData)
 import Dict exposing (..)
 import Http exposing (..)
 import Json.Encode as Encode
@@ -70,10 +70,56 @@ postBlock blockId block =
         |> Http.send HandlePostResponse
 
 
+postFieldInput : String -> Opts -> Cmd Msg
+postFieldInput input { versification, language } =
+    let
+        inputObj =
+            Encode.object
+                [ ( "input", Encode.string input ) ]
+
+        postUrl =
+            "http://localhost:7777/parse?vers="
+                ++ versification
+                ++ "&lang="
+                ++ language
+    in
+    Http.post postUrl (Http.jsonBody inputObj) decodeRefData
+        |> Http.send HandleParserResponse
+
+
 fetchScripText : Osis -> Cmd Msg
 fetchScripText osis =
     Http.getString ("https://ygjutai0z5.execute-api.us-east-1.amazonaws.com/percival/" ++ osis)
         |> Http.send SetScripText
+
+
+postValidateHtml : String -> Cmd Msg
+postValidateHtml html =
+    let
+        htmlStr =
+            "<!DOCTYPE html>\n<html lang=\"en\"><head><title>Validate me</title></head>\n<body>"
+                ++ Regex.replace All (regex " epub:type=\"[^\"]+\"") (\_ -> "") html
+                ++ "</body></html>"
+
+        postUrl =
+            "https://validator.nu/?level=error&out=json"
+    in
+    Http.post postUrl (Http.stringBody "text/html; charset=utf-8" htmlStr) decodeMessages
+        |> Http.send HandleMessages
+
+
+postNewHtml : String -> String -> Cmd Msg
+postNewHtml blockId html =
+    let
+        htmlObj =
+            Encode.object
+                [ ( "html", Encode.string html ) ]
+
+        postUrl =
+            "http://localhost:7777/data/blocks/" ++ blockId ++ "?in=html"
+    in
+    Http.post postUrl (Http.jsonBody htmlObj) decodeBlock
+        |> Http.send HandlePostHtml
 
 
 getOsisWithRefId : RefId -> BlockDict -> Osis
@@ -407,9 +453,9 @@ updateBlockRef refId refDP block =
             let
                 origTagRegex =
                     regex
-                        ("<a data-cross-ref=(?:\"|'){(?:&quot;|\")scripture(?:&quot;|\"):(?:&quot;|\")"
+                        ("<a data-cross-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
                             ++ ref.data.scripture
-                            ++ "[^}]+}\">"
+                            ++ "[^}]+}(\"|')>"
                             ++ escape ref.text
                             ++ "</a>"
                         )
@@ -430,7 +476,7 @@ getRevisedAltList newOsis data =
             data.scripture
     in
     if not (currentOsis == "") then
-        if List.member newOsis data.possible then
+        if List.member newOsis data.possible && not (newOsis == "") then
             if List.member currentOsis data.possible then
                 data.possible
                     |> List.filter (\altOsis -> not (altOsis == newOsis))
@@ -483,7 +529,105 @@ updateRefData ref refDP =
                     in
                     { data | confirmed = confirmation }
 
+                UserVal valid message ->
+                    let
+                        altList =
+                            getRevisedAltList "" data
+                    in
+                    if valid == Invalid then
+                        { data
+                            | scripture = ""
+                            , valid = False
+                            , message = message
+                            , confirmed = False
+                            , possible = altList
+                        }
+                    else
+                        data
+
                 _ ->
                     data
     in
     { ref | data = newData }
+
+
+toXhtml : String -> String
+toXhtml html =
+    html
+        |> Regex.replace All
+            (caseInsensitive (regex "([a-z:]+=)'([^']+)'"))
+            (\{ submatches } ->
+                case submatches of
+                    first :: second :: _ ->
+                        "\""
+                            |> String.append (Maybe.withDefault "" second)
+                            |> String.append "\""
+                            |> String.append (Maybe.withDefault "" first)
+
+                    _ ->
+                        ""
+            )
+        |> Regex.replace All
+            (caseInsensitive (regex "<(link|hr|img|source)([^>]+)>"))
+            (\{ submatches } ->
+                case submatches of
+                    first :: second :: _ ->
+                        " />"
+                            |> String.append (Maybe.withDefault "" second)
+                            |> String.append (Maybe.withDefault "" first)
+                            |> String.append "<"
+
+                    _ ->
+                        ""
+            )
+        |> Regex.replace All (caseInsensitive (regex "<br>")) (\_ -> "<br />")
+        |> Regex.replace All
+            (caseInsensitive (regex "<video(.*?)controls(.*?)>"))
+            (\{ submatches } ->
+                case submatches of
+                    first :: second :: _ ->
+                        ">"
+                            |> String.append (Maybe.withDefault "" second)
+                            |> String.append "controls=\"controls\""
+                            |> String.append (Maybe.withDefault "" first)
+                            |> String.append "<video"
+
+                    _ ->
+                        ""
+            )
+        |> Regex.replace All (caseInsensitive (regex "alt=\"0\"")) (\_ -> "alt=\"\"")
+        |> Regex.replace All
+            (caseInsensitive (regex "(>[^<>\n]*?)&(?!#)([^<>\n]*?<)"))
+            (\{ submatches } ->
+                case submatches of
+                    first :: second :: _ ->
+                        Maybe.withDefault "" second
+                            |> String.append "&#38;"
+                            |> String.append (Maybe.withDefault "" first)
+
+                    _ ->
+                        ""
+            )
+        |> Regex.replace All
+            (caseInsensitive (regex "\"({[^}]+})\""))
+            (\{ submatches } ->
+                case submatches of
+                    first :: _ ->
+                        "'"
+                            |> String.append (Maybe.withDefault "" first)
+                            |> String.append "'"
+
+                    _ ->
+                        ""
+            )
+        |> Regex.replace All (caseInsensitive (regex "&quot;")) (\_ -> "\"")
+
+
+normalizeBlockHtml : Block -> Block
+normalizeBlockHtml block =
+    { block | html = toXhtml block.html }
+
+
+ingestBlocks : BlockDict -> BlockDict
+ingestBlocks blocks =
+    Dict.map (\k v -> normalizeBlockHtml v) blocks

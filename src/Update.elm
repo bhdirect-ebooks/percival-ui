@@ -3,6 +3,7 @@ module Update exposing (..)
 import Dict exposing (..)
 import Dom
 import Keyboard.Combo
+import Regex
 import Task
 import Types exposing (..)
 import UndoList exposing (UndoList)
@@ -18,12 +19,11 @@ keyboardCombos =
     , Keyboard.Combo.combo1 Keyboard.Combo.left (ToRef Prev (Just Unconfirmed))
     , Keyboard.Combo.combo1 Keyboard.Combo.right (ToRef Next (Just Unconfirmed))
     , Keyboard.Combo.combo1 Keyboard.Combo.escape (ListRefsByType Nothing)
-    , Keyboard.Combo.combo1 Keyboard.Combo.enter (ChangeRefData (UserConf Confirmed))
-    , Keyboard.Combo.combo1 Keyboard.Combo.z Undo
-    , Keyboard.Combo.combo2 ( Keyboard.Combo.shift, Keyboard.Combo.z ) Redo
-    , Keyboard.Combo.combo2 ( Keyboard.Combo.shift, Keyboard.Combo.enter ) EditOsis
-    , Keyboard.Combo.combo2 ( Keyboard.Combo.shift, Keyboard.Combo.r ) (ChangeRefData Remove)
-    , Keyboard.Combo.combo2 ( Keyboard.Combo.shift, Keyboard.Combo.forwardSlash ) ToggleHelp
+    , Keyboard.Combo.combo1 Keyboard.Combo.c (ChangeRefData (UserConf Confirmed))
+    , Keyboard.Combo.combo1 Keyboard.Combo.u Undo
+    , Keyboard.Combo.combo1 Keyboard.Combo.i Redo
+    , Keyboard.Combo.combo1 Keyboard.Combo.backspace (ChangeRefData Remove)
+    , Keyboard.Combo.combo1 Keyboard.Combo.h ToggleHelp
     ]
 
 
@@ -45,13 +45,16 @@ update msg model =
 
         LoadData (Ok data) ->
             let
+                normBlocks =
+                    ingestBlocks data.blocks
+
                 newModel =
                     { model
                         | percivalData = data
                         , blockState =
                             UndoList.fresh
                                 { changedBlockId = ""
-                                , blocks = data.blocks
+                                , blocks = normBlocks
                                 }
                         , currentDocId = getFirstIdOfDict data.docs
                     }
@@ -69,18 +72,28 @@ update msg model =
             let
                 _ =
                     Debug.log "Err" err
+
+                showError =
+                    Regex.replace (Regex.AtMost 1)
+                        (Regex.regex "^(.*?), body = .*?$")
+                        (\{ submatches } ->
+                            case submatches of
+                                first :: _ ->
+                                    Maybe.withDefault "" first
+
+                                _ ->
+                                    ""
+                        )
+                        (toString err)
             in
-            { model | loadingError = Just "Something went wrong." } ! []
+            { model | loadingError = Just showError } ! []
 
         ComboMsg msg ->
-            if not model.inEditMode then
-                let
-                    ( keys, cmd ) =
-                        Keyboard.Combo.update msg model.keys
-                in
-                { model | keys = keys } ! [ cmd ]
-            else
-                model ! []
+            let
+                ( keys, cmd ) =
+                    Keyboard.Combo.update msg model.keys
+            in
+            { model | keys = keys } ! [ cmd ]
 
         Undo ->
             if UndoList.hasPast model.blockState && not model.inEditMode then
@@ -246,7 +259,8 @@ update msg model =
             in
             if isGoodRef && not model.inEditMode then
                 { newModel
-                    | currentRefId = refId
+                    | listedRefIds = listedRefArray
+                    , currentRefId = refId
                     , viewAltRefs = False
                     , viewScriptureText = False
                     , scriptureText = ""
@@ -299,7 +313,7 @@ update msg model =
             in
             { model | isSaving = False } ! []
 
-        HandlePostResponse (Ok html) ->
+        HandlePostResponse (Ok _) ->
             { model | isSaving = False } ! []
 
         ChangeRefData refDP ->
@@ -330,7 +344,7 @@ update msg model =
                                     , blocks = newBlockDict
                                     }
 
-                        newModel =
+                        iterimModel =
                             if refDP == Remove then
                                 { model
                                     | blockState = newBlockState
@@ -342,8 +356,17 @@ update msg model =
                                     | blockState = newBlockState
                                     , isSaving = True
                                 }
+
+                        ( newModel, cmd ) =
+                            if refDP == UserConf Confirmed then
+                                update (ToRef Next (Just Unconfirmed)) iterimModel
+                            else
+                                ( iterimModel, Cmd.none )
+
+                        commands =
+                            [ cmd ] |> List.append [ postBlock blockId newBlock ]
                     in
-                    newModel ! [ postBlock blockId newBlock ]
+                    newModel ! commands
 
         EditOsis ->
             { model
@@ -361,15 +384,214 @@ update msg model =
                     getOsisWithRefId model.currentRefId model.blockState.present.blocks
             in
             if model.osisField == "" then
-                model ! [ Task.attempt (\_ -> DoNothing) (Dom.focus "osis-field") ]
+                { model | badInput = True } ! [ Task.attempt (\_ -> DoNothing) (Dom.focus "osis-field") ]
             else if not (model.osisField == currentOsisOrMess) then
-                model ! []
+                { model
+                    | inEditMode = False
+                    , editingOsis = False
+                    , badInput = False
+                }
+                    ! [ Task.attempt (\_ -> DoNothing) (Dom.blur "osis-field")
+                      , postFieldInput model.osisField model.percivalData.parserOpts
+                      ]
             else
                 { model
                     | inEditMode = False
                     , editingOsis = False
+                    , badInput = False
                 }
                     ! [ Task.attempt (\_ -> DoNothing) (Dom.blur "osis-field") ]
 
-        HandleParserResponse str ->
+        HandleParserResponse (Err err) ->
+            let
+                _ =
+                    Debug.log "Err" err
+            in
+            { model | badInput = True } ! [ Task.attempt (\_ -> DoNothing) (Dom.focus "osis-field") ]
+
+        HandleParserResponse (Ok refData) ->
+            let
+                ( newModel, cmd ) =
+                    if refData.valid then
+                        update (ChangeRefData (Scripture refData.scripture))
+                            { model
+                                | badInput = False
+                                , inEditMode = False
+                                , editingOsis = False
+                                , osisField = refData.scripture
+                            }
+                    else
+                        update (ChangeRefData (UserVal Invalid refData.message))
+                            { model
+                                | badInput = True
+                                , inEditMode = True
+                                , editingOsis = True
+                                , osisField = refData.message
+                            }
+
+                domCmd =
+                    if refData.valid then
+                        Dom.blur "osis-field"
+                    else
+                        Dom.focus "osis-field"
+
+                commands =
+                    [ cmd ]
+                        |> List.append [ Task.attempt (\_ -> DoNothing) domCmd ]
+            in
+            newModel ! commands
+
+        AddContextToBlock ->
             model ! []
+
+        EditBlock blockId ->
+            let
+                block =
+                    Dict.get blockId model.blockState.present.blocks
+            in
+            case block of
+                Nothing ->
+                    model ! []
+
+                Just block ->
+                    { model
+                        | htmlSource = block.html
+                        , inEditMode = True
+                        , editorActive = True
+                        , editingBlockId = blockId
+                    }
+                        ! []
+
+        UpdateSource str ->
+            { model | htmlSource = str } ! []
+
+        ToggleEditorTheme ->
+            let
+                newTheme =
+                    case model.editorTheme of
+                        Dark ->
+                            Light
+
+                        Light ->
+                            Dark
+            in
+            { model | editorTheme = newTheme } ! []
+
+        CancelHtml ->
+            { model
+                | htmlSource = ""
+                , inEditMode = False
+                , editorActive = False
+                , editingBlockId = ""
+                , isValidating = False
+                , htmlValidation = []
+            }
+                ! []
+
+        RevertHtml ->
+            let
+                block =
+                    Dict.get model.editingBlockId model.blockState.present.blocks
+            in
+            case block of
+                Nothing ->
+                    model ! []
+
+                Just block ->
+                    { model
+                        | htmlSource = block.html
+                        , isValidating = False
+                        , htmlValidation = []
+                    }
+                        ! []
+
+        SubmitHtml ->
+            if model.htmlSource == "" then
+                { model | htmlValidation = [ "Cannot be empty." ] }
+                    ! [ Task.attempt (\_ -> DoNothing) (Dom.focus model.editingBlockId) ]
+            else
+                { model | isValidating = True } ! [ postValidateHtml model.htmlSource ]
+
+        HandleMessages (Err err) ->
+            let
+                _ =
+                    Debug.log "Err" err
+            in
+            if toString err == "NetworkError" then
+                { model
+                    | htmlValidation = []
+                    , isValidating = False
+                    , isSaving = True
+                }
+                    ! [ postNewHtml model.editingBlockId model.htmlSource ]
+            else
+                { model
+                    | htmlValidation = [ toString err ]
+                    , isValidating = False
+                }
+                    ! [ Task.attempt (\_ -> DoNothing) (Dom.focus model.editingBlockId) ]
+
+        HandleMessages (Ok res) ->
+            let
+                msgList =
+                    List.map (\r -> r.message) res.messages
+
+                newModel =
+                    { model
+                        | htmlValidation = msgList
+                        , isValidating = False
+                    }
+            in
+            if List.isEmpty msgList then
+                { newModel | isSaving = True } ! [ postNewHtml model.editingBlockId model.htmlSource ]
+            else
+                newModel ! [ Task.attempt (\_ -> DoNothing) (Dom.focus model.editingBlockId) ]
+
+        HandlePostHtml (Err err) ->
+            let
+                _ =
+                    Debug.log "Err" err
+            in
+            { model
+                | htmlValidation = [ toString err ]
+                , isSaving = False
+            }
+                ! [ Task.attempt (\_ -> DoNothing) (Dom.focus model.editingBlockId) ]
+
+        HandlePostHtml (Ok block) ->
+            let
+                normBlock =
+                    normalizeBlockHtml block
+
+                newBlockDict =
+                    model.blockState.present.blocks
+                        |> Dict.update model.editingBlockId (always (Just normBlock))
+
+                newBlockState =
+                    model.blockState
+                        |> UndoList.new
+                            { changedBlockId = model.editingBlockId
+                            , blocks = newBlockDict
+                            }
+
+                newModel =
+                    { model
+                        | htmlSource = ""
+                        , inEditMode = False
+                        , editorActive = False
+                        , editingBlockId = ""
+                        , blockState = newBlockState
+                        , isSaving = False
+                    }
+
+                docRefArray =
+                    getDocRefArray newModel
+
+                listedRefArray =
+                    getListedRefArray newModel
+            in
+            { newModel
+                | docRefIds = docRefArray
+                , listedRefIds = listedRefArray
+            }
+                ! []

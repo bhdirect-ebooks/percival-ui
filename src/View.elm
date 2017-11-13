@@ -1,5 +1,6 @@
 module View exposing (..)
 
+import Ace
 import Array exposing (..)
 import Css exposing (..)
 import Css.Colors exposing (..)
@@ -52,7 +53,7 @@ viewOrError model =
             div [ Attr.class "container" ]
                 [ div [ Attr.class "row" ]
                     [ div [ Attr.class "col text-center" ]
-                        [ h2 [ Attr.class "pt-5 pb-3" ] [ Html.text errorMessage ]
+                        [ h2 [ Attr.class "pt-5 pb-3" ] [ Html.text "Something went wrong." ]
                         , iframe
                             [ attribute "allowFullScreen" ""
                             , Attr.class "giphy-embed"
@@ -62,6 +63,12 @@ viewOrError model =
                             , attribute "width" "480"
                             ]
                             []
+                        , p [ Attr.class "b text-center pt-3" ]
+                            [ Html.text "It's not global thermonuclear war, but it "
+                            , Html.em [] [ Html.text "is" ]
+                            , Html.text " this:"
+                            ]
+                        , p [ Attr.class "text-left" ] [ Html.text errorMessage ]
                         ]
                     ]
                 ]
@@ -136,10 +143,6 @@ viewMain model =
         docBlocks =
             getDocBlocks model
 
-        currentBlockNodes =
-            Dict.map (\k v -> viewBlock k v model.currentRefId) docBlocks
-                |> Dict.values
-
         docName =
             Dict.get model.currentDocId model.percivalData.docs
                 |> (\doc ->
@@ -175,7 +178,10 @@ viewMain model =
                         , Attr.class "card pb-4"
                         , Attr.id "title-doc"
                         ]
-                        currentBlockNodes
+                        (docBlocks
+                            |> Dict.toList
+                            |> List.map (\( k, v ) -> viewBlock k v model)
+                        )
                     ]
                 ]
             ]
@@ -242,9 +248,12 @@ viewHeader isSaving docName =
         ]
 
 
-viewBlock : String -> Block -> String -> Html Msg
-viewBlock blockId block currentRefId =
+viewBlock : String -> Block -> Model -> Html Msg
+viewBlock blockId block model =
     let
+        { currentRefId, editorActive } =
+            model
+
         parsed =
             HtmlParser.parse block.html
 
@@ -252,10 +261,132 @@ viewBlock blockId block currentRefId =
             processNodes parsed block.refs currentRefId
                 |> Tuple.first
     in
-    div [ Attr.class "blocks", Attr.id blockId ] (toVirtualDom nodes)
+    if editorActive && model.editingBlockId == blockId then
+        viewEditor blockId model
+    else
+        div
+            [ Attr.class "blocks"
+            , Attr.id blockId
+            , onDoubleClick (EditBlock blockId)
+            ]
+            (toVirtualDom nodes)
 
 
-processNodes : List Node -> RefDict -> String -> ( List Node, RefDict )
+viewEditor : String -> Model -> Html Msg
+viewEditor blockId { htmlSource, editorTheme, htmlValidation, isValidating } =
+    let
+        editorThemeStr =
+            case editorTheme of
+                Light ->
+                    "chrome"
+
+                Dark ->
+                    "tomorrow_night_eighties"
+
+        isChecked =
+            case editorTheme of
+                Light ->
+                    False
+
+                Dark ->
+                    True
+
+        cardClasses =
+            if List.isEmpty htmlValidation then
+                Attr.class "card d-block m-3 animated fadeIn"
+            else
+                Attr.class "card card-danger d-block m-3 no-no shake-effect"
+
+        validateSpan =
+            if isValidating then
+                span [ Attr.class "mr-5 text-secondary" ] [ Html.text "Checking HTML..." ]
+            else
+                span [] []
+    in
+    div
+        [ Attr.id blockId
+        , cardClasses
+        ]
+        [ div [ Attr.class "card-body" ]
+            [ Ace.toHtml
+                [ Ace.onSourceChange UpdateSource
+                , Ace.value htmlSource
+                , Ace.mode "html"
+                , Ace.theme editorThemeStr
+                , Ace.enableBasicAutocompletion True
+                , Ace.enableLiveAutocompletion True
+                , Ace.enableSnippets True
+                , Ace.showCursor True
+                , Ace.showGutter True
+                , Ace.showPrintMargin False
+                , Ace.highlightActiveLine True
+                , Ace.tabSize 2
+                , Ace.useSoftTabs True
+                , Ace.useWrapMode True
+                , Ace.extensions [ "language_tools" ]
+                ]
+                []
+            , div [ Attr.class "text-right mt-3" ]
+                [ Html.span [ Attr.class "float-left" ]
+                    [ label
+                        [ Attr.class "switch switch-text switch-sm switch-pill switch-dark"
+                        ]
+                        [ input
+                            [ Attr.class "switch-input"
+                            , type_ "checkbox"
+                            , onClick ToggleEditorTheme
+                            , Attr.checked isChecked
+                            ]
+                            []
+                        , span
+                            [ Attr.class "switch-label"
+                            , attribute "data-on" "DRK"
+                            , attribute "data-off" "LGT"
+                            ]
+                            []
+                        , span [ Attr.class "switch-handle" ]
+                            []
+                        ]
+                    ]
+                , validateSpan
+                , Html.button
+                    [ Attr.class "btn btn-sm btn-light"
+                    , onClick CancelHtml
+                    ]
+                    [ Html.text "Cancel" ]
+                , Html.button
+                    [ Attr.class "btn btn-sm btn-secondary ml-3"
+                    , onClick RevertHtml
+                    ]
+                    [ Html.text "Reset" ]
+                , Html.button
+                    [ Attr.class "btn btn-sm btn-primary ml-3"
+                    , onClick SubmitHtml
+                    ]
+                    [ Html.text "Submit" ]
+                , viewValidatorMessages htmlValidation
+                ]
+            ]
+        ]
+
+
+viewValidatorMessages : List String -> Html Msg
+viewValidatorMessages htmlValidation =
+    if List.isEmpty htmlValidation then
+        span [] []
+    else
+        ul [ Attr.class "list-group text-left mt-3" ]
+            (htmlValidation
+                |> List.map
+                    (\m ->
+                        li
+                            [ Attr.class "list-group-item list-group-item-danger" ]
+                            [ Html.text m ]
+                    )
+            )
+
+
+processNodes : List Node -> RefDict -> RefId -> ( List Node, RefDict )
 processNodes nodes refs currentRefId =
     let
         ( processedNode, remainingRefs ) =
@@ -278,7 +409,7 @@ processNodes nodes refs currentRefId =
             ( List.concat [ [ processedNode ], siblingNodes ], trueRemaining )
 
 
-processNode : Node -> RefDict -> String -> ( Node, RefDict )
+processNode : Node -> RefDict -> RefId -> ( Node, RefDict )
 processNode node refs currentRefId =
     case node of
         Text str ->
@@ -291,7 +422,7 @@ processNode node refs currentRefId =
             ( node, refs )
 
 
-processElement : ( Node, RefDict ) -> String -> String -> Attributes -> List Node -> ( Node, RefDict )
+processElement : ( Node, RefDict ) -> RefId -> String -> Attributes -> List Node -> ( Node, RefDict )
 processElement orig currentRefId tagName attrs children =
     let
         attrNames =
@@ -311,7 +442,7 @@ processElement orig currentRefId tagName attrs children =
         orig
 
 
-getChildNodes : ( Node, RefDict ) -> String -> String -> Attributes -> List Node -> ( Node, RefDict )
+getChildNodes : ( Node, RefDict ) -> RefId -> String -> Attributes -> List Node -> ( Node, RefDict )
 getChildNodes orig currentRefId tagName attrs children =
     let
         ( processedNodes, remainingRefs ) =
@@ -320,7 +451,7 @@ getChildNodes orig currentRefId tagName attrs children =
     ( Element tagName attrs processedNodes, remainingRefs )
 
 
-getRefNode : RefDict -> String -> ( Node, RefDict )
+getRefNode : RefDict -> RefId -> ( Node, RefDict )
 getRefNode refs currentRefId =
     let
         refId =
@@ -764,10 +895,12 @@ viewRefActions currentRef model =
 
 
 viewOsisField : Model -> Html Msg
-viewOsisField { editingOsis, osisField } =
+viewOsisField { editingOsis, osisField, badInput } =
     let
         editClasses =
-            if osisField == "" then
+            if badInput then
+                Attr.class "b text-uppercase w-100 no-no shake-effect"
+            else if osisField == "" then
                 Attr.class "b text-uppercase w-100 no-no"
             else
                 Attr.class "b text-uppercase w-100"
@@ -788,7 +921,7 @@ viewOsisField { editingOsis, osisField } =
                 , Attr.value osisField
                 , Attr.name "osis"
                 , Attr.id "osis-field"
-                , onDoubleClick EditOsis
+                , onClick EditOsis
                 , Attr.readonly True
                 , styles [ color (hex "29363d") ]
                 ]
@@ -808,9 +941,9 @@ viewActionButtons { viewAltRefs, inEditMode } data =
         altButton =
             if data.valid && not (List.isEmpty data.possible) then
                 if List.length data.possible == 1 then
-                    viewSingleAltButton data.possible
+                    viewSingleAltButton inEditMode data.possible
                 else
-                    viewDropdownButton viewAltRefs data.possible
+                    viewDropdownButton inEditMode viewAltRefs data.possible
             else
                 span [] []
 
@@ -846,18 +979,11 @@ viewActionButtons { viewAltRefs, inEditMode } data =
         ]
 
 
-viewSingleAltButton : List Osis -> Html Msg
-viewSingleAltButton possible =
-    button
-        [ Attr.class "btn btn-outline-primary ml-2"
-        , type_ "button"
-        , styles
-            [ minWidth (px 80)
-            , maxWidth (px 196)
-            ]
-        ]
-        [ Html.text
-            (List.head possible
+viewSingleAltButton : Bool -> List Osis -> Html Msg
+viewSingleAltButton inEditMode possible =
+    let
+        text =
+            List.head possible
                 |> (\osis ->
                         case osis of
                             Nothing ->
@@ -866,23 +992,44 @@ viewSingleAltButton possible =
                             Just osis ->
                                 osis
                    )
-            )
+
+        altAttr =
+            if inEditMode || text == "" then
+                Attr.disabled True
+            else
+                onClick (ChangeRefData (Scripture text))
+    in
+    button
+        [ Attr.class "btn btn-outline-primary ml-2"
+        , type_ "button"
+        , styles
+            [ minWidth (px 80)
+            , maxWidth (px 196)
+            ]
+        , altAttr
         ]
+        [ Html.text text ]
 
 
-viewDropdownButton : Bool -> List Osis -> Html Msg
-viewDropdownButton showAlt alternates =
+viewDropdownButton : Bool -> Bool -> List Osis -> Html Msg
+viewDropdownButton inEditMode showAlt alternates =
     let
         ariaExpanded =
             if showAlt then
                 "true"
             else
                 "false"
+
+        dropAttr =
+            if inEditMode then
+                Attr.disabled True
+            else
+                onClick ToggleAltRefs
     in
     div
         [ Attr.class "btn-group ml-2"
         , attribute "role" "group"
-        , onClick ToggleAltRefs
+        , dropAttr
         , styles
             [ minWidth (px 80)
             , maxWidth (px 196)
@@ -934,7 +1081,21 @@ viewRefContent ref model =
                     isInvalid ref
             in
             if invalid then
-                div [] []
+                div [ Attr.class "row mt-3" ]
+                    [ div
+                        [ Attr.class "col col-4" ]
+                        [ button
+                            [ type_ "button"
+                            , Attr.class "btn btn-outline-primary mt-4"
+                            , onClick (ShowScripture ref.data.scripture)
+                            ]
+                            [ Html.text "Add Context" ]
+                        ]
+                    , div [ Attr.class "col col-8 mt-3 pl-1 pr-5" ]
+                        [ Html.small [ Attr.class "text-muted i" ]
+                            [ Html.text "Apply parsing context to the entire parent html 'block'" ]
+                        ]
+                    ]
             else if model.viewScriptureText then
                 div
                     [ Attr.class "container ml-0"

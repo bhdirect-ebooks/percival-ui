@@ -33,6 +33,13 @@ initialModel =
     , currentRefId = ""
     , editingOsis = False
     , osisField = ""
+    , badInput = False
+    , htmlSource = ""
+    , editingBlockId = ""
+    , editorActive = False
+    , editorTheme = Dark
+    , isValidating = False
+    , htmlValidation = []
     , loadingError = Nothing
     , isSaving = False
     , inEditMode = False
@@ -56,10 +63,13 @@ initialCmd =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ Keyboard.Combo.subscriptions model.keys
-        , clickedRef HandleBlockRefClick
-        ]
+    if model.inEditMode then
+        Sub.batch [ clickedRef HandleBlockRefClick ]
+    else
+        Sub.batch
+            [ Keyboard.Combo.subscriptions model.keys
+            , clickedRef HandleBlockRefClick
+            ]
 
 
 main : Program Never Model Msg
