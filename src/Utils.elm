@@ -122,6 +122,25 @@ postNewHtml blockId html =
         |> Http.send HandlePostHtml
 
 
+postContext : String -> String -> Opts -> Cmd Msg
+postContext blockId context { versification, language } =
+    let
+        ctxtObj =
+            Encode.object
+                [ ( "context", Encode.string context ) ]
+
+        postUrl =
+            "http://localhost:7777/data/blocks/"
+                ++ blockId
+                ++ "?with=context&vers="
+                ++ versification
+                ++ "&lang="
+                ++ language
+    in
+    Http.post postUrl (Http.jsonBody ctxtObj) decodeBlock
+        |> Http.send HandlePostHtml
+
+
 getOsisWithRefId : RefId -> BlockDict -> Osis
 getOsisWithRefId refId blocks =
     let
@@ -625,7 +644,11 @@ toXhtml html =
 
 normalizeBlockHtml : Block -> Block
 normalizeBlockHtml block =
-    { block | html = toXhtml block.html }
+    let
+        normHtml =
+            toXhtml block.html
+    in
+    { block | html = normHtml }
 
 
 ingestBlocks : BlockDict -> BlockDict

@@ -7,7 +7,7 @@ import Css.Colors exposing (..)
 import Dict exposing (..)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (attribute, class, classList, href, id, src, style, type_)
-import Html.Events exposing (keyCode, on, onBlur, onClick, onDoubleClick, onInput, onWithOptions)
+import Html.Events exposing (keyCode, on, onBlur, onClick, onDoubleClick, onFocus, onInput, onWithOptions)
 import HtmlParser exposing (..)
 import HtmlParser.Util exposing (..)
 import Json.Decode as Json
@@ -899,11 +899,11 @@ viewOsisField { editingOsis, osisField, badInput } =
     let
         editClasses =
             if badInput then
-                Attr.class "b text-uppercase w-100 no-no shake-effect"
+                Attr.class "w-100 no-no shake-effect"
             else if osisField == "" then
-                Attr.class "b text-uppercase w-100 no-no"
+                Attr.class "w-100 no-no"
             else
-                Attr.class "b text-uppercase w-100"
+                Attr.class "w-100"
 
         attrs =
             if editingOsis then
@@ -921,7 +921,7 @@ viewOsisField { editingOsis, osisField, badInput } =
                 , Attr.value osisField
                 , Attr.name "osis"
                 , Attr.id "osis-field"
-                , onClick EditOsis
+                , onDoubleClick EditOsis
                 , Attr.readonly True
                 , styles [ color (hex "29363d") ]
                 ]
@@ -1081,19 +1081,35 @@ viewRefContent ref model =
                     isInvalid ref
             in
             if invalid then
-                div [ Attr.class "row mt-3" ]
-                    [ div
-                        [ Attr.class "col col-4" ]
-                        [ button
-                            [ type_ "button"
-                            , Attr.class "btn btn-outline-primary mt-4"
-                            , onClick (ShowScripture ref.data.scripture)
-                            ]
-                            [ Html.text "Add Context" ]
+                div []
+                    [ div [ Attr.class "row mt-4" ]
+                        [ div
+                            [ Attr.class "col col-12" ]
+                            [ Html.text "Add Context:" ]
                         ]
-                    , div [ Attr.class "col col-8 mt-3 pl-1 pr-5" ]
-                        [ Html.small [ Attr.class "text-muted i" ]
-                            [ Html.text "Apply parsing context to the entire parent html 'block'" ]
+                    , div [ Attr.class "row mt-1" ]
+                        [ div
+                            [ Attr.class "col col-12" ]
+                            [ input
+                                [ Attr.class "w-100"
+                                , Attr.value model.contextField
+                                , Attr.name "context"
+                                , Attr.id "context-field"
+                                , onInput UpdateContextField
+                                , onFocus (EditContext True)
+                                , onBlur (EditContext False)
+                                , onEnter AddContextToBlock
+                                , styles [ color (hex "29363d") ]
+                                ]
+                                []
+                            ]
+                        ]
+                    , div [ Attr.class "row mt-1" ]
+                        [ div
+                            [ Attr.class "col col-12" ]
+                            [ Html.small [ Attr.class "text-muted i" ]
+                                [ Html.text "Applies parsing context to the entire parent HTML chunk" ]
+                            ]
                         ]
                     ]
             else if model.viewScriptureText then

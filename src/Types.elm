@@ -61,6 +61,8 @@ type alias Model =
     , editingOsis : Bool
     , osisField : String
     , badInput : Bool
+    , editingContext : Bool
+    , contextField : String
     , htmlSource : String
     , editingBlockId : String
     , editorActive : Bool
@@ -189,6 +191,8 @@ type Msg
     | UpdateField String
     | ChangeOsis
     | HandleParserResponse (Result Http.Error RefData)
+    | EditContext Bool
+    | UpdateContextField String
     | AddContextToBlock
     | EditBlock String
     | UpdateSource String

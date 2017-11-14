@@ -363,10 +363,13 @@ update msg model =
                             else
                                 ( iterimModel, Cmd.none )
 
+                        osisOrMessage =
+                            getOsisWithRefId newModel.currentRefId newModel.blockState.present.blocks
+
                         commands =
                             [ cmd ] |> List.append [ postBlock blockId newBlock ]
                     in
-                    newModel ! commands
+                    { newModel | osisField = osisOrMessage } ! commands
 
         EditOsis ->
             { model
@@ -441,8 +444,33 @@ update msg model =
             in
             newModel ! commands
 
+        EditContext state ->
+            { model
+                | inEditMode = state
+                , editingContext = state
+            }
+                ! []
+
+        UpdateContextField str ->
+            { model | contextField = str } ! []
+
         AddContextToBlock ->
-            model ! []
+            let
+                blockId =
+                    getBlockIdFromRefId model.currentRefId
+
+                blurTask =
+                    Task.attempt (\_ -> DoNothing) (Dom.blur "context-field")
+            in
+            if not (model.contextField == "") then
+                { model
+                    | contextField = ""
+                    , isSaving = True
+                    , editingBlockId = blockId
+                }
+                    ! [ postContext blockId model.contextField model.percivalData.parserOpts, blurTask ]
+            else
+                model ! [ blurTask ]
 
         EditBlock blockId ->
             let
