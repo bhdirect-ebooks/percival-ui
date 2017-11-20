@@ -106,6 +106,9 @@ update msg model =
 
                     block =
                         Dict.get blockId newState.present.blocks
+
+                    osisOrMessage =
+                        getOsisWithRefId model.currentRefId model.blockState.present.blocks
                 in
                 case block of
                     Nothing ->
@@ -120,6 +123,9 @@ update msg model =
                             | blockState = newState
                             , viewAltRefs = False
                             , isSaving = True
+                            , viewScriptureText = False
+                            , scriptureText = ""
+                            , osisField = osisOrMessage
                         }
                             ! [ postBlock blockId block ]
             else
@@ -136,6 +142,9 @@ update msg model =
 
                     block =
                         Dict.get blockId newState.present.blocks
+
+                    osisOrMessage =
+                        getOsisWithRefId model.currentRefId model.blockState.present.blocks
                 in
                 case block of
                     Nothing ->
@@ -150,6 +159,9 @@ update msg model =
                             | blockState = newState
                             , viewAltRefs = False
                             , isSaving = True
+                            , viewScriptureText = False
+                            , scriptureText = ""
+                            , osisField = osisOrMessage
                         }
                             ! [ postBlock blockId block ]
             else
