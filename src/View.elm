@@ -1098,7 +1098,7 @@ viewOsisField { editingOsis, osisField, badInput } =
                 , styles [ color (hex "29363d") ]
                 ]
             else
-                [ Attr.class "border-0 b text-uppercase"
+                [ Attr.class "border-0 b text-uppercase w-100"
                 , Attr.value osisField
                 , Attr.name "osis"
                 , Attr.id "osis-field"
