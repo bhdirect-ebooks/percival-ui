@@ -1,7 +1,7 @@
 {
     "version": "0.0.2",
     "summary": "Percival's fancy get-up",
-    "repository": "https://github.com/bhdirect-ebooks/percival-report.git",
+    "repository": "https://github.com/bhdirect-ebooks/percival-ui.git",
     "license": "MIT",
     "source-directories": [
         ".",
