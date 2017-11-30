@@ -45,16 +45,13 @@ update msg model =
 
         LoadData (Ok data) ->
             let
-                normBlocks =
-                    ingestBlocks data.blocks
-
                 newModel =
                     { model
                         | percivalData = data
                         , blockState =
                             UndoList.fresh
                                 { changedBlockId = ""
-                                , blocks = normBlocks
+                                , blocks = data.blocks
                                 }
                         , currentDocId = getFirstIdOfDict data.docs
                     }
@@ -600,12 +597,9 @@ update msg model =
 
         HandlePostHtml (Ok block) ->
             let
-                normBlock =
-                    normalizeBlockHtml block
-
                 newBlockDict =
                     model.blockState.present.blocks
-                        |> Dict.update model.editingBlockId (always (Just normBlock))
+                        |> Dict.update model.editingBlockId (always (Just block))
 
                 newBlockState =
                     model.blockState
