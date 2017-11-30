@@ -1,5 +1,5 @@
 {
-    "version": "0.0.2",
+    "version": "0.0.3",
     "summary": "Percival's fancy get-up",
     "repository": "https://github.com/bhdirect-ebooks/percival-ui.git",
     "license": "MIT",
@@ -24,7 +24,7 @@
         "scottcorgan/keyboard-combo": "5.0.0 <= v < 6.0.0"
     },
     "dependency-sources": {
-        "DenisKolodin/elm-ace": "git@github.com:westonlit/elm-ace.git"
+        "DenisKolodin/elm-ace": "git@github.com:DenisKolodin/elm-ace.git"
     },
     "elm-version": "0.18.0 <= v < 0.19.0"
 }
