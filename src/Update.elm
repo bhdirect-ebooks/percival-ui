@@ -383,7 +383,12 @@ update msg model =
                             if refDP == UserConf Confirmed then
                                 update (ToRef Next (Just Unconfirmed)) iterimModel
                             else
-                                ( iterimModel, Cmd.none )
+                                ( { iterimModel
+                                    | viewScriptureText = False
+                                    , scriptureText = ""
+                                  }
+                                , Cmd.none
+                                )
 
                         osisOrMessage =
                             getOsisWithRefId newModel.currentRefId newModel.blockState.present.blocks
@@ -415,6 +420,8 @@ update msg model =
                     | inEditMode = False
                     , editingOsis = False
                     , badInput = False
+                    , viewScriptureText = False
+                    , scriptureText = ""
                 }
                     ! [ Task.attempt (\_ -> DoNothing) (Dom.blur "osis-field")
                       , postFieldInput model.osisField model.percivalData.parserOpts
