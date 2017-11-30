@@ -1,4 +1,4 @@
-module Update exposing (..)
+port module Update exposing (..)
 
 import Dict exposing (..)
 import Dom
@@ -8,6 +8,18 @@ import Task
 import Types exposing (..)
 import UndoList exposing (UndoList)
 import Utils exposing (..)
+
+
+port clickedRef : (String -> msg) -> Sub msg
+
+
+port scrollList : String -> Cmd msg
+
+
+port scrollDoc : String -> Cmd msg
+
+
+port backtoTop : Bool -> Cmd msg
 
 
 keyboardCombos : List (Keyboard.Combo.KeyCombo Msg)

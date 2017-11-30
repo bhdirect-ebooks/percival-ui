@@ -1,4 +1,4 @@
-port module Utils exposing (..)
+module Utils exposing (..)
 
 import Array exposing (..)
 import Decoders exposing (decodeBlock, decodeMessages, decodeRefData)
@@ -7,18 +7,6 @@ import Http exposing (..)
 import Json.Encode as Encode
 import Regex exposing (..)
 import Types exposing (..)
-
-
-port clickedRef : (String -> msg) -> Sub msg
-
-
-port scrollList : String -> Cmd msg
-
-
-port scrollDoc : String -> Cmd msg
-
-
-port backtoTop : Bool -> Cmd msg
 
 
 encodeRefData : RefData -> Encode.Value

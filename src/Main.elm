@@ -9,7 +9,6 @@ import Keyboard.Combo
 import Types exposing (..)
 import UndoList exposing (UndoList)
 import Update exposing (..)
-import Utils exposing (clickedRef)
 import View exposing (viewOrError)
 
 
