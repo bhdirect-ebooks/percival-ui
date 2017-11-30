@@ -1,11 +1,11 @@
 module Main exposing (..)
 
 import Array
-import Decoders exposing (decodePercivalData)
 import Dict
 import Html
 import Http
 import Keyboard.Combo
+import ServerIO exposing (decodePercivalData)
 import Types exposing (..)
 import UndoList exposing (UndoList)
 import Update exposing (..)

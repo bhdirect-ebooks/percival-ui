@@ -4,6 +4,7 @@ import Dict exposing (..)
 import Dom
 import Keyboard.Combo
 import Regex
+import ServerIO exposing (fetchScripText, postBlock, postContext, postFieldInput, postNewHtml, postValidateHtml)
 import Task
 import Types exposing (..)
 import UndoList exposing (UndoList)

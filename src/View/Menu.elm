@@ -1,15 +1,10 @@
 module View.Menu exposing (viewMenu)
 
-import Ace
-import Array exposing (..)
 import Css exposing (..)
 import Css.Colors exposing (..)
 import Dict exposing (..)
 import Html exposing (..)
-import Html.Attributes as Attr exposing (attribute, class, classList, href, id, src, style, type_)
-import HtmlParser exposing (..)
-import HtmlParser.Util exposing (..)
-import Json.Decode as Json
+import Html.Attributes as Attr exposing (class, id)
 import Types exposing (..)
 import Utils exposing (..)
 import View.Menu.ActionPanel exposing (viewActionPanel)
