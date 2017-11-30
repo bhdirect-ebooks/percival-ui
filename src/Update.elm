@@ -621,6 +621,9 @@ update msg model =
                             , blocks = newBlockDict
                             }
 
+                osisOrMessage =
+                    getOsisWithRefId model.currentRefId newBlockState.present.blocks
+
                 newModel =
                     { model
                         | htmlSource = ""
@@ -629,6 +632,10 @@ update msg model =
                         , editingBlockId = ""
                         , blockState = newBlockState
                         , isSaving = False
+                        , viewAltRefs = False
+                        , viewScriptureText = False
+                        , scriptureText = ""
+                        , osisField = osisOrMessage
                     }
 
                 docRefArray =
