@@ -254,7 +254,7 @@ update msg model =
                     , scriptureText = ""
                     , osisField = osisOrMessage
                 }
-                    ! [ scrollList refListId, scrollDoc blockId ]
+                    ! [ scrollList refListId, scrollDoc selectedRef ]
 
         HandleBlockRefClick refId ->
             let
@@ -310,7 +310,7 @@ update msg model =
                     , scriptureText = ""
                     , osisField = osisOrMessage
                 }
-                    ! [ scrollDoc blockId ]
+                    ! [ scrollDoc refId ]
 
         ToggleAltRefs ->
             { model | viewAltRefs = not model.viewAltRefs } ! []
