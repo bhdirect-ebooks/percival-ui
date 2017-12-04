@@ -54,29 +54,37 @@ type alias RefStuff =
 
 
 type alias Model =
-    { percivalData : PercivalData
-    , blockState : UndoList State
-    , currentDocId : String
-    , currentRefId : RefId
-    , editingOsis : Bool
-    , osisField : String
-    , badInput : Bool
-    , editingContext : Bool
-    , contextField : String
+    { percivalData : PercivalData -- get rid of this
+    , loadingError : Maybe String
+    , keys : Keyboard.Combo.Model Msg
+    , isSaving : Bool
+    , inEditMode : Bool
+    , inHelp : Bool
+    , currentDocId : String -- convert to zipper list of docIds w/ doc names
+    , blockState : UndoList State -- convert to changes = {past: [], future []}, with only changed block info
+
+    -- move next 6 to type alias EditorModel
     , htmlSource : String
     , editingBlockId : String
     , editorActive : Bool
     , editorTheme : EditorTheme
     , isValidating : Bool
     , htmlValidation : List String
-    , loadingError : Maybe String
-    , isSaving : Bool
-    , inEditMode : Bool
-    , inHelp : Bool
-    , docRefIds : RefIdArray
+
+    -- move next 4 to type alias ScriptureListModel
     , selectedRefType : Maybe RefType
+    , docRefIds : RefIdArray -- make this a list (RefId, Confirmation)
+
+    --convert the next 2 to zipper List (RefId, Confirmation)
+    , currentRefId : RefId
     , listedRefIds : RefIdArray
-    , keys : Keyboard.Combo.Model Msg
+
+    -- move next 8 to type alias ActionPanelModel
+    , editingOsis : Bool
+    , osisField : String
+    , badInput : Bool
+    , editingContext : Bool
+    , contextField : String
     , viewAltRefs : Bool
     , viewScriptureText : Bool
     , scriptureText : String
