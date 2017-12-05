@@ -5,7 +5,6 @@ import Dict
 import Dom
 import Http
 import Keyboard.Combo
-import UndoList exposing (UndoList)
 
 
 type EditorTheme
@@ -54,33 +53,71 @@ type alias RefStuff =
 
 
 type alias Model =
-    { percivalData : PercivalData -- get rid of this
-    , loadingError : Maybe String
+    { loadingError : Maybe String
     , keys : Keyboard.Combo.Model Msg
     , isSaving : Bool
     , inEditMode : Bool
     , inHelp : Bool
-    , currentDocId : String -- convert to zipper list of docIds w/ doc names
-    , blockState : UndoList State -- convert to changes = {past: [], future []}, with only changed block info
+    , undoList : Changes
+    , volumeTitle : String
+    , parserOpts : Opts
+    , docs : DocZipper
+    , editor : EditorModel
+    , scriptureList : ScriptureListModel
+    , actionPanel : ActionPanelModel
+    }
 
-    -- move next 6 to type alias EditorModel
-    , htmlSource : String
+
+type alias PercivalData =
+    { volumeTitle : String
+    , parserOpts : Opts
+    , docs : DocZipper
+    }
+
+
+type alias DocZipper =
+    { prev : List DocId
+    , current : DocData
+    , next : List DocId
+    }
+
+
+type alias Changes =
+    { past : List ( BlockId, Block )
+    , future : List ( BlockId, Block )
+    }
+
+
+type alias EditorModel =
+    { htmlSource : String
     , editingBlockId : String
     , editorActive : Bool
     , editorTheme : EditorTheme
     , isValidating : Bool
     , htmlValidation : List String
+    }
 
-    -- move next 4 to type alias ScriptureListModel
-    , selectedRefType : Maybe RefType
-    , docRefIds : RefIdArray -- make this a list (RefId, Confirmation)
 
-    --convert the next 2 to zipper List (RefId, Confirmation)
-    , currentRefId : RefId
-    , listedRefIds : RefIdArray
+type alias ScriptureListModel =
+    { selectedRefType : Maybe RefType
+    , docRefIds : List RefConfTuple
+    , listedRefs : RefZipper
+    }
 
-    -- move next 8 to type alias ActionPanelModel
-    , editingOsis : Bool
+
+type alias RefConfTuple =
+    ( RefId, Confirmation )
+
+
+type alias RefZipper =
+    { prev : List RefConfTuple
+    , current : RefConfTuple
+    , next : List RefConfTuple
+    }
+
+
+type alias ActionPanelModel =
+    { editingOsis : Bool
     , osisField : String
     , badInput : Bool
     , editingContext : Bool
@@ -88,20 +125,6 @@ type alias Model =
     , viewAltRefs : Bool
     , viewScriptureText : Bool
     , scriptureText : String
-    }
-
-
-type alias State =
-    { changedBlockId : String
-    , blocks : BlockDict
-    }
-
-
-type alias PercivalData =
-    { volumeTitle : String
-    , parserOpts : Opts
-    , docs : DocDict
-    , blocks : BlockDict
     }
 
 
@@ -115,12 +138,20 @@ type alias Opts =
     }
 
 
+type alias DocData =
+    { docId : DocId
+    , name : String
+    , blocks : List BlockTuple
+    , refs : RefDict
+    }
+
+
 type alias DocDict =
     Dict.Dict String Doc
 
 
-type alias BlockDict =
-    Dict.Dict String Block
+type alias BlockTuple =
+    ( BlockId, BlockHtml )
 
 
 type alias RefDict =
@@ -132,9 +163,13 @@ type alias Doc =
 
 
 type alias Block =
-    { html : String
+    { html : BlockHtml
     , refs : RefDict
     }
+
+
+type alias BlockHtml =
+    String
 
 
 type alias Ref =
@@ -151,6 +186,14 @@ type alias RefData =
     , possible : List Osis
     , confirmed : Bool
     }
+
+
+type alias DocId =
+    String
+
+
+type alias BlockId =
+    String
 
 
 type alias RefId =

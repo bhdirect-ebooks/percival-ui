@@ -7,51 +7,59 @@ import Http
 import Keyboard.Combo
 import ServerIO exposing (decodePercivalData)
 import Types exposing (..)
-import UndoList exposing (UndoList)
 import Update exposing (..)
 import View exposing (viewOrError)
 
 
 initialModel : Model
 initialModel =
-    { percivalData =
-        { volumeTitle = ""
-        , parserOpts =
-            { versification = ""
-            , language = ""
-            }
-        , docs = Dict.fromList []
-        , blocks = Dict.fromList []
-        }
-    , blockState =
-        UndoList.fresh
-            { changedBlockId = ""
-            , blocks = Dict.fromList []
-            }
-    , currentDocId = ""
-    , currentRefId = ""
-    , editingOsis = False
-    , osisField = ""
-    , badInput = False
-    , editingContext = False
-    , contextField = ""
-    , htmlSource = ""
-    , editingBlockId = ""
-    , editorActive = False
-    , editorTheme = Dark
-    , isValidating = False
-    , htmlValidation = []
-    , loadingError = Nothing
+    { loadingError = Nothing
+    , keys = Keyboard.Combo.init keyboardCombos ComboMsg
     , isSaving = False
     , inEditMode = False
     , inHelp = False
-    , docRefIds = Array.fromList []
-    , selectedRefType = Nothing
-    , listedRefIds = Array.fromList []
-    , keys = Keyboard.Combo.init keyboardCombos ComboMsg
-    , viewAltRefs = False
-    , viewScriptureText = False
-    , scriptureText = ""
+    , undoList =
+        { past = []
+        , future = []
+        }
+    , volumeTitle = ""
+    , parserOpts =
+        { versification = ""
+        , language = ""
+        }
+    }
+    , docs =
+        { prev : List DocId
+        , current : DocData
+        , next : List DocId
+        }
+    , editor =
+        { htmlSource = ""
+        , editingBlockId = ""
+        , editorActive = False
+        , editorTheme = Dark
+        , isValidating = False
+        , htmlValidation = []
+        }
+    , scriptureList =
+        { selectedRefType = Nothing
+        , docRefIds = []
+        , listedRefIds =
+            { prev : []
+            , current : ("", Unconfirmed)
+            , next : []
+            }
+        }
+    , actionPanel =
+        { editingOsis = False
+        , osisField = ""
+        , badInput = False
+        , editingContext = False
+        , contextField = ""
+        , viewAltRefs = False
+        , viewScriptureText = False
+        , scriptureText = ""
+        }
     }
 
 

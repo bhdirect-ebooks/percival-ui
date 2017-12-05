@@ -2,7 +2,7 @@ module ServerIO exposing (..)
 
 import Dict exposing (..)
 import Http exposing (..)
-import Json.Decode as Decode exposing (Decoder, bool, dict, int, list, map, string)
+import Json.Decode as Decode exposing (Decoder, bool, dict, index, int, list, map, map2, string)
 import Json.Decode.Pipeline as Pipeline exposing (decode, hardcoded, optional, required)
 import Json.Encode as Encode
 import Regex exposing (..)
@@ -14,8 +14,7 @@ decodePercivalData =
     decode PercivalData
         |> required "vol_title" string
         |> required "opts" decodeOpts
-        |> required "docs" decodeDocDict
-        |> required "blocks" decodeBlockDict
+        |> required "docs" decodeDocZipper
 
 
 decodeOpts : Decoder Opts
@@ -25,20 +24,26 @@ decodeOpts =
         |> required "lang" string
 
 
-decodeDocDict : Decoder DocDict
-decodeDocDict =
-    dict decodeDoc
+decodeDocZipper : Decoder DocZipper
+decodeDocZipper =
+    decode DocZipper
+        |> hardcoded []
+        |> required "first" decodeDocData
+        |> required "rest" (list string)
 
 
-decodeDoc : Decoder Doc
-decodeDoc =
-    decode Doc
+decodeDocData : Decoder DocData
+decodeDocData =
+    decode DocData
+        |> required "docId" string
         |> required "name" string
+        |> required "blocks" (list decodeBlockTuple)
+        |> required "refs" decodeRefDict
 
 
-decodeBlockDict : Decoder BlockDict
-decodeBlockDict =
-    dict decodeBlock
+decodeBlockTuple : Decoder BlockTuple
+decodeBlockTuple =
+    map2 (,) (index 0 string) (index 1 string)
 
 
 decodeBlock : Decoder Block
