@@ -58,23 +58,31 @@ update msg model =
 
         LoadData (Ok data) ->
             let
-                newModel =
-                    { model
-                        | percivalData = data
-                        , blockState =
-                            UndoList.fresh
-                                { changedBlockId = ""
-                                , blocks = data.blocks
-                                }
-                        , currentDocId = getFirstIdOfDict data.docs
-                    }
+                docRefIds = Dict.keys data.docs.refs
 
-                docRefArray =
-                    getDocRefArray newModel
+                docRefs = getDocRefList data.docs.current
+
+                listedRefs =
+                    { prev = []
+                    , current =
+                        case (head docRefs) of
+                            Nothing ->
+                                ("", Unconfirmed)
+
+                            Just refTup ->
+                                refTup
+                    , next = tail docRefs
+                    }
             in
-            { newModel
-                | docRefIds = docRefArray
-                , listedRefIds = docRefArray
+                    { model
+                    | volumeTitle = data.volumeTitle
+                    , parserOpts = data.parserOpts
+                    , docs = data.docs
+                    , scriptureList =
+                        { model.scriptureList
+                        | docRefIds = docRefIds
+                        , listedRefs = listedRefs
+                    }
             }
                 ! []
 

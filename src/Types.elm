@@ -15,6 +15,7 @@ type EditorTheme
 type NavDir
     = Prev
     | Next
+    | Id
 
 
 type Confidence
@@ -90,7 +91,7 @@ type alias Changes =
 
 type alias EditorModel =
     { htmlSource : String
-    , editingBlockId : String
+    , editingBlockId : BlockId
     , editorActive : Bool
     , editorTheme : EditorTheme
     , isValidating : Bool

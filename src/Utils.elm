@@ -8,31 +8,19 @@ import ServerIO exposing (encodeRefData)
 import Types exposing (..)
 
 
-getOsisWithRefId : RefId -> BlockDict -> Osis
-getOsisWithRefId refId blocks =
-    let
-        blockId =
-            getBlockIdFromRefId refId
-    in
-    Dict.get blockId blocks
-        |> (\mayBlock ->
-                case mayBlock of
+getOsisWithRefId : RefId -> RefDict -> Osis
+getOsisWithRefId refId refs =
+    Dict.get refId refs
+        |> (\mayRef ->
+                case mayRef of
                     Nothing ->
                         ""
 
-                    Just block ->
-                        Dict.get refId block.refs
-                            |> (\mayRef ->
-                                    case mayRef of
-                                        Nothing ->
-                                            ""
-
-                                        Just ref ->
-                                            if ref.data.valid then
-                                                ref.data.scripture
-                                            else
-                                                ref.data.message
-                               )
+                    Just ref ->
+                        if ref.data.valid then
+                            ref.data.scripture
+                        else
+                            ref.data.message
            )
 
 
@@ -46,19 +34,13 @@ getBlockIdFromRefId refId =
     Regex.replace (AtMost 1) (regex "-\\d\\d\\d$") (\_ -> "") refId
 
 
-belongsToDoc : String -> String -> Bool
+belongsToDoc : DocId -> BlockId -> Bool
 belongsToDoc currentDocId blockKey =
     let
         docBlockRegex =
             String.concat [ "^", currentDocId ]
     in
     contains (regex docBlockRegex) blockKey
-
-
-getDocBlocks : Model -> BlockDict
-getDocBlocks model =
-    model.blockState.present.blocks
-        |> Dict.filter (\k v -> belongsToDoc model.currentDocId k)
 
 
 getFirstIdOfDict : Dict String a -> String
@@ -121,18 +103,22 @@ getNearbyIdOfArray navDir currentId keysArray =
            )
 
 
-getNearbyIdOfDict : NavDir -> String -> Dict String a -> String
-getNearbyIdOfDict navDir currentId dict =
-    let
-        keysArray =
-            Array.fromList (Dict.keys dict)
-    in
-    getNearbyIdOfArray navDir currentId keysArray
+
+{-
+   getNearbyIdOfDict : NavDir -> String -> Dict String a -> String
+   getNearbyIdOfDict navDir currentId dict =
+       let
+           keysArray =
+               Array.fromList (Dict.keys dict)
+       in
+       getNearbyIdOfArray navDir currentId keysArray
 
 
-getNearbyDocId : NavDir -> Model -> String
-getNearbyDocId navDir model =
-    getNearbyIdOfDict navDir model.currentDocId model.percivalData.docs
+   getNearbyDocId : NavDir -> Model -> String
+   getNearbyDocId navDir model =
+       getNearbyIdOfDict navDir model.currentDocId model.percivalData.docs
+
+-}
 
 
 getNearbyRefId : NavDir -> RefId -> RefIdArray -> RefId
@@ -216,15 +202,18 @@ getRefCount refType refList =
     List.length filtered
 
 
-getDocRefs : Model -> List ( RefId, Ref )
-getDocRefs model =
-    let
-        blockList =
-            getDocBlocks model
-                |> Dict.values
-    in
-    List.map (\block -> block.refs |> Dict.toList) blockList
-        |> List.concat
+
+{-
+   getDocRefs : RefDict -> List ( RefId, Ref )
+   getDocRefs model =
+       let
+           blockList =
+               getDocBlocks model
+                   |> Dict.values
+       in
+       List.map (\block -> block.refs |> Dict.toList) blockList
+           |> List.concat
+-}
 
 
 toSimpleRefTup : ( RefId, Ref ) -> ( RefId, Confirmation )
@@ -236,11 +225,11 @@ toSimpleRefTup ( refId, ref ) =
     ( refId, confType )
 
 
-getDocRefArray : Model -> RefIdArray
-getDocRefArray model =
-    getDocRefs model
+getDocRefList : DocData -> List RefConfTuple
+getDocRefList docData =
+    docData.refs
+        |> Dict.toList
         |> List.map toSimpleRefTup
-        |> Array.fromList
 
 
 filterRefs : Maybe RefType -> List ( RefId, Ref ) -> List ( RefId, Ref )
@@ -270,18 +259,17 @@ filterRefs mayRefType refTupList =
                     List.filter (\( k, v ) -> not (isInvalid v)) refTupList
 
 
-getListedRefArray : Model -> RefIdArray
-getListedRefArray model =
-    getDocRefs model
-        |> filterRefs model.selectedRefType
+getListedRefList : DocData -> Maybe RefType -> List RefConfTuple
+getListedRefList docData refType =
+    docData.refs
+        |> Dict.toList
+        |> filterRefs refType
         |> List.map toSimpleRefTup
-        |> Array.fromList
 
 
-isInRefIdArray : RefId -> RefIdArray -> Bool
-isInRefIdArray refId refIdArray =
-    refIdArray
-        |> Array.toList
+isInRefTupList : RefId -> List RefConfTuple -> Bool
+isInRefTupList refId refTupList =
+    refTupList
         |> List.filter (\tup -> Tuple.first tup == refId)
         |> List.isEmpty
         |> not
