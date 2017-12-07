@@ -82,7 +82,7 @@ processElement orig currentRefId tagName attrs children =
             Tuple.first (List.unzip attrs)
 
         isRefTag =
-            tagName == "a" && List.member "data-cross-ref" attrNames
+            tagName == "a" && isScriptureRef attrs
 
         hasChildren =
             Basics.not (List.isEmpty children)
@@ -93,6 +93,14 @@ processElement orig currentRefId tagName attrs children =
         getChildNodes orig currentRefId tagName attrs children
     else
         orig
+
+
+isScriptureRef : Attributes -> Bool
+isScriptureRef attrs =
+    attrs
+        |> List.filter (\( name, value ) -> name == "data-cross-ref" && String.contains "scripture" value)
+        |> List.isEmpty
+        |> not
 
 
 getChildNodes : ( Node, RefDict ) -> RefId -> String -> Attributes -> List Node -> ( Node, RefDict )
