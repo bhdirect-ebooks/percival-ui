@@ -9,6 +9,7 @@ import ServerIO exposing (decodePercivalData)
 import Types exposing (..)
 import Update exposing (..)
 import View exposing (viewOrError)
+import UndoList exposing (UndoList)
 
 
 initialModel : Model
@@ -28,11 +29,15 @@ initialModel =
         , language = ""
         }
     }
-    , docs =
-        { prev : List DocId
-        , current : DocData
-        , next : List DocId
-        }
+    , state =
+        UndoList.fresh
+            { changedBlockId = ""
+            , docs =
+                { prev : List DocId
+                , current : DocData
+                , next : List DocId
+                }
+            }
     , editor =
         { htmlSource = ""
         , editingBlockId = ""

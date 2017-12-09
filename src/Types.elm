@@ -5,6 +5,7 @@ import Dict
 import Dom
 import Http
 import Keyboard.Combo
+import UndoList exposing (UndoList)
 
 
 type EditorTheme
@@ -15,7 +16,7 @@ type EditorTheme
 type NavDir
     = Prev
     | Next
-    | Id
+    | Id RefId
 
 
 type Confidence
@@ -62,7 +63,7 @@ type alias Model =
     , undoList : Changes
     , volumeTitle : String
     , parserOpts : Opts
-    , docs : DocZipper
+    , state : UndoList State
     , editor : EditorModel
     , scriptureList : ScriptureListModel
     , actionPanel : ActionPanelModel
@@ -72,6 +73,12 @@ type alias Model =
 type alias PercivalData =
     { volumeTitle : String
     , parserOpts : Opts
+    , docs : DocZipper
+    }
+
+
+type alias State =
+    { changedBlockId : String
     , docs : DocZipper
     }
 

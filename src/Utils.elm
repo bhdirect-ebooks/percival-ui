@@ -1,6 +1,5 @@
 module Utils exposing (..)
 
-import Array exposing (..)
 import Dict exposing (..)
 import Json.Encode as Encode
 import Regex exposing (..)
@@ -55,90 +54,6 @@ getFirstIdOfDict dict =
                     Just id ->
                         id
            )
-
-
-findIndexByValue : a -> Array a -> Int
-findIndexByValue targetValue array =
-    array
-        |> Array.toIndexedList
-        |> List.filter (\tup -> Tuple.second tup == targetValue)
-        |> List.head
-        |> (\tup ->
-                case tup of
-                    Nothing ->
-                        0
-
-                    Just tup ->
-                        Tuple.first tup
-           )
-
-
-getNearbyIdOfArray : NavDir -> String -> Array String -> String
-getNearbyIdOfArray navDir currentId keysArray =
-    let
-        targetIndex =
-            if currentId == "" then
-                0
-            else
-                let
-                    currentIndex =
-                        findIndexByValue currentId keysArray
-                in
-                case navDir of
-                    Prev ->
-                        currentIndex - 1
-
-                    Next ->
-                        currentIndex + 1
-    in
-    keysArray
-        |> Array.get targetIndex
-        |> (\targetId ->
-                case targetId of
-                    Nothing ->
-                        currentId
-
-                    Just targetId ->
-                        targetId
-           )
-
-
-
-{-
-   getNearbyIdOfDict : NavDir -> String -> Dict String a -> String
-   getNearbyIdOfDict navDir currentId dict =
-       let
-           keysArray =
-               Array.fromList (Dict.keys dict)
-       in
-       getNearbyIdOfArray navDir currentId keysArray
-
-
-   getNearbyDocId : NavDir -> Model -> String
-   getNearbyDocId navDir model =
-       getNearbyIdOfDict navDir model.currentDocId model.percivalData.docs
-
--}
-
-
-getNearbyRefId : NavDir -> RefId -> RefIdArray -> RefId
-getNearbyRefId navDir currentRefId refTupArray =
-    let
-        refIdArr =
-            Array.map (\refIdTup -> Tuple.first refIdTup) refTupArray
-    in
-    getNearbyIdOfArray navDir currentRefId refIdArr
-
-
-getNearbyUnconfId : NavDir -> RefId -> RefIdArray -> RefId
-getNearbyUnconfId navDir currentRefId refTupArray =
-    let
-        filteredRefIdArr =
-            refTupArray
-                |> Array.filter (\( refId, conf ) -> conf == Unconfirmed || refId == currentRefId)
-                |> Array.map (\refIdTup -> Tuple.first refIdTup)
-    in
-    getNearbyIdOfArray navDir currentRefId filteredRefIdArr
 
 
 isConfirmed : Ref -> Bool

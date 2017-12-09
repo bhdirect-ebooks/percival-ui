@@ -3,6 +3,7 @@ port module Update exposing (..)
 import Dict exposing (..)
 import Dom
 import Keyboard.Combo
+import ModelHelpers exposing (..)
 import Regex
 import ServerIO exposing (fetchScripText, postBlock, postContext, postFieldInput, postNewHtml, postValidateHtml)
 import Task
@@ -58,31 +59,36 @@ update msg model =
 
         LoadData (Ok data) ->
             let
-                docRefIds = Dict.keys data.docs.refs
+                docRefIds =
+                    Dict.keys data.docs.refs
 
-                docRefs = getDocRefList data.docs.current
+                docRefs =
+                    getDocRefList data.docs.current
 
                 listedRefs =
                     { prev = []
                     , current =
-                        case (head docRefs) of
+                        case List.head docRefs of
                             Nothing ->
-                                ("", Unconfirmed)
+                                ( "", Unconfirmed )
 
                             Just refTup ->
                                 refTup
-                    , next = tail docRefs
+                    , next = List.tail docRefs
                     }
             in
-                    { model
-                    | volumeTitle = data.volumeTitle
-                    , parserOpts = data.parserOpts
-                    , docs = data.docs
-                    , scriptureList =
-                        { model.scriptureList
-                        | docRefIds = docRefIds
-                        , listedRefs = listedRefs
-                    }
+            { model
+                | volumeTitle = data.volumeTitle
+                , parserOpts = data.parserOpts
+                , state =
+                    UndoList.fresh
+                        { changedBlockId = ""
+                        , docs = data.docs
+                        }
+                , scriptureList =
+                    model.scriptureList
+                        |> setDocRefIds docRefIds
+                        |> setListedRefs listedRefs
             }
                 ! []
 
@@ -191,15 +197,38 @@ update msg model =
         ListRefsByType mayRefType ->
             let
                 newModel =
-                    if mayRefType == model.selectedRefType then
-                        { model | selectedRefType = Nothing }
+                    if mayRefType == model.scriptureList.selectedRefType then
+                        { model
+                            | scriptureList =
+                                setSelectedRefType Nothing model.scriptureList
+                        }
                     else
-                        { model | selectedRefType = mayRefType }
+                        { model
+                            | scriptureList =
+                                setSelectedRefType mayRefType model.scriptureList
+                        }
 
-                listedRefArray =
-                    getListedRefArray newModel
+                currentRefId =
+                    Tuple.first newModel.scriptureList.listedRefs.current
+
+                listedRefs =
+                    getListedRefList newModel.state.docs.current newModel.scriptureList.selectedRefType
+
+                isInList =
+                    List.unzip listedRefs
+                    |> Tuple.first
+                    |> List.member currentRefId
+
+                refZipper =
+                    if isInList then
+                        zipToRef (Id currentRefId) 
             in
-            { newModel | listedRefIds = listedRefArray } ! []
+            { newModel
+                | scriptureList =
+                    model.scriptureList
+                        |> setListedRefs listedRefs
+            }
+                ! []
 
         ToDoc dir ->
             let

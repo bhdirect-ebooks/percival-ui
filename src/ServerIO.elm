@@ -27,9 +27,9 @@ decodeOpts =
 decodeDocZipper : Decoder DocZipper
 decodeDocZipper =
     decode DocZipper
-        |> hardcoded []
-        |> required "first" decodeDocData
-        |> required "rest" (list string)
+        |> required "prev" (list string)
+        |> required "current" decodeDocData
+        |> required "next" (list string)
 
 
 decodeDocData : Decoder DocData
