@@ -37,6 +37,7 @@ keyboardCombos =
     , Keyboard.Combo.combo1 Keyboard.Combo.i Redo
     , Keyboard.Combo.combo1 Keyboard.Combo.backspace (ChangeRefData Remove)
     , Keyboard.Combo.combo1 Keyboard.Combo.h ToggleHelp
+    , Keyboard.Combo.combo1 Keyboard.Combo.d ToggleDash
     ]
 
 
