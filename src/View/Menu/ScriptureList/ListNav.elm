@@ -32,7 +32,7 @@ viewListNav refCnt =
         [ li [ Attr.class "nav-item" ]
             [ span
                 [ Attr.class "nav-link"
-                , onClick (ToDoc Prev)
+                , onClick (ToDoc (ByDir Prev))
                 ]
                 [ i [ Attr.class "icon-control-start text-muted", fsSm ] [] ]
             ]
@@ -77,7 +77,7 @@ viewListNav refCnt =
         , li [ Attr.class "nav-item" ]
             [ span
                 [ Attr.class "nav-link"
-                , onClick (ToDoc Next)
+                , onClick (ToDoc (ByDir Next))
                 ]
                 [ i [ Attr.class "icon-control-end text-muted", fsSm ] [] ]
             ]

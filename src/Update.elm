@@ -25,8 +25,8 @@ port backtoTop : Bool -> Cmd msg
 
 keyboardCombos : List (Keyboard.Combo.KeyCombo Msg)
 keyboardCombos =
-    [ Keyboard.Combo.combo1 Keyboard.Combo.q (ToDoc Prev)
-    , Keyboard.Combo.combo1 Keyboard.Combo.w (ToDoc Next)
+    [ Keyboard.Combo.combo1 Keyboard.Combo.q (ToDoc (ByDir Prev))
+    , Keyboard.Combo.combo1 Keyboard.Combo.w (ToDoc (ByDir Next))
     , Keyboard.Combo.combo1 Keyboard.Combo.up (ToRef Prev Nothing)
     , Keyboard.Combo.combo1 Keyboard.Combo.down (ToRef Next Nothing)
     , Keyboard.Combo.combo1 Keyboard.Combo.left (ToRef Prev (Just Unconfirmed))
@@ -60,7 +60,9 @@ update msg model =
             let
                 newModel =
                     { model
-                        | percivalData = data
+                        | volumeTitle = data.volumeTitle
+                        , parserOpts = data.parserOpts
+                        , docs = data.docs
                         , blockState =
                             UndoList.fresh
                                 { changedBlockId = ""
@@ -71,10 +73,14 @@ update msg model =
 
                 docRefArray =
                     getDocRefArray newModel
+
+                dashboard =
+                    getDashboard newModel data.trueDocs
             in
             { newModel
                 | docRefIds = docRefArray
                 , listedRefIds = docRefArray
+                , dashboard = dashboard
             }
                 ! []
 
@@ -119,18 +125,24 @@ update msg model =
 
                     osisOrMessage =
                         getOsisWithRefId model.currentRefId model.blockState.present.blocks
+
+                    newModel =
+                        { model | blockState = newState }
+
+                    dashboard =
+                        updateDashboard blockId newModel
                 in
                 case block of
                     Nothing ->
-                        { model
-                            | blockState = newState
+                        { newModel
+                            | dashboard = dashboard
                             , viewAltRefs = False
                         }
                             ! []
 
                     Just block ->
-                        { model
-                            | blockState = newState
+                        { newModel
+                            | dashboard = dashboard
                             , viewAltRefs = False
                             , isSaving = True
                             , viewScriptureText = False
@@ -155,18 +167,24 @@ update msg model =
 
                     osisOrMessage =
                         getOsisWithRefId model.currentRefId model.blockState.present.blocks
+
+                    newModel =
+                        { model | blockState = newState }
+
+                    dashboard =
+                        updateDashboard blockId newModel
                 in
                 case block of
                     Nothing ->
-                        { model
-                            | blockState = newState
+                        { newModel
+                            | dashboard = dashboard
                             , viewAltRefs = False
                         }
                             ! []
 
                     Just block ->
-                        { model
-                            | blockState = newState
+                        { newModel
+                            | dashboard = dashboard
                             , viewAltRefs = False
                             , isSaving = True
                             , viewScriptureText = False
@@ -176,6 +194,9 @@ update msg model =
                             ! [ postBlock blockId block ]
             else
                 model ! []
+
+        ToggleDash ->
+            { model | showDash = not model.showDash } ! []
 
         ToggleHelp ->
             { model | inHelp = not model.inHelp } ! []
@@ -193,10 +214,18 @@ update msg model =
             in
             { newModel | listedRefIds = listedRefArray } ! []
 
-        ToDoc dir ->
+        ToDocFromDash docId ->
+            { model | showDash = False } ! [ Task.succeed (ToDoc (ById docId)) |> Task.perform identity ]
+
+        ToDoc navData ->
             let
                 selectedDoc =
-                    getNearbyDocId dir model
+                    case navData of
+                        ByDir dir ->
+                            getNearbyDocId dir model
+
+                        ById docId ->
+                            docId
             in
             if selectedDoc == model.currentDocId || model.inEditMode then
                 model ! []
@@ -395,8 +424,15 @@ update msg model =
 
                         commands =
                             [ cmd ] |> List.append [ postBlock blockId newBlock ]
+
+                        dashboard =
+                            updateDashboard blockId newModel
                     in
-                    { newModel | osisField = osisOrMessage } ! commands
+                    { newModel
+                        | dashboard = dashboard
+                        , osisField = osisOrMessage
+                    }
+                        ! commands
 
         EditOsis ->
             { model
@@ -424,7 +460,7 @@ update msg model =
                     , scriptureText = ""
                 }
                     ! [ Task.attempt (\_ -> DoNothing) (Dom.blur "osis-field")
-                      , postFieldInput model.osisField model.percivalData.parserOpts
+                      , postFieldInput model.osisField model.parserOpts
                       ]
             else
                 { model
@@ -497,7 +533,7 @@ update msg model =
                     , isSaving = True
                     , editingBlockId = blockId
                 }
-                    ! [ postContext blockId model.contextField model.percivalData.parserOpts, blurTask ]
+                    ! [ postContext blockId model.contextField model.parserOpts, blurTask ]
             else
                 model ! [ blurTask ]
 
@@ -631,7 +667,7 @@ update msg model =
                 osisOrMessage =
                     getOsisWithRefId model.currentRefId newBlockState.present.blocks
 
-                newModel =
+                interimModel =
                     { model
                         | htmlSource = ""
                         , inEditMode = False
@@ -646,13 +682,18 @@ update msg model =
                     }
 
                 docRefArray =
-                    getDocRefArray newModel
+                    getDocRefArray interimModel
 
                 listedRefArray =
-                    getListedRefArray newModel
+                    getListedRefArray interimModel
+
+                newModel =
+                    { interimModel
+                        | docRefIds = docRefArray
+                        , listedRefIds = listedRefArray
+                    }
+
+                dashboard =
+                    updateDashboard model.editingBlockId newModel
             in
-            { newModel
-                | docRefIds = docRefArray
-                , listedRefIds = listedRefArray
-            }
-                ! []
+            { newModel | dashboard = dashboard } ! []

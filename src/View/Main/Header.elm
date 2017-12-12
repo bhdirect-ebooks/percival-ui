@@ -40,6 +40,14 @@ viewHeader isSaving docName =
                 [ div [ Attr.class "btn-group" ]
                     [ savingSpan
                     , button
+                        [ onClick ToggleDash
+                        , whiteBg
+                        , Attr.class "btn"
+                        ]
+                        [ i [ Attr.class "icon-speedometer" ] []
+                        , Html.text "  Dash"
+                        ]
+                    , button
                         [ onClick Undo
                         , whiteBg
                         , Attr.class "btn"

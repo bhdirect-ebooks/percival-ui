@@ -3,6 +3,7 @@ module View exposing (..)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (attribute, class, src)
 import Types exposing (..)
+import View.Dashboard exposing (viewDashboard)
 import View.Help exposing (viewHelp)
 import View.Main exposing (viewMain)
 import View.Menu exposing (viewMenu)
@@ -43,15 +44,16 @@ view : Model -> Html Msg
 view model =
     let
         modalBackdrop =
-            case model.inHelp of
-                True ->
-                    div [ Attr.class "modal-backdrop fade show" ] []
-
-                False ->
-                    span [] []
+            if model.showDash then
+                div [ Attr.class "modal-backdrop modal-backdrop-primary fade show" ] []
+            else if model.inHelp then
+                div [ Attr.class "modal-backdrop fade show" ] []
+            else
+                span [] []
     in
     div [ Attr.class "app-body" ]
-        [ viewHelp model
+        [ viewDashboard model
+        , viewHelp model
         , viewMain model
         , viewMenu model
         , modalBackdrop

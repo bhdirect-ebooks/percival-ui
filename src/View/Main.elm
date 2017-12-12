@@ -18,7 +18,7 @@ viewMain model =
             getDocBlocks model
 
         docName =
-            Dict.get model.currentDocId model.percivalData.docs
+            Dict.get model.currentDocId model.docs
                 |> (\doc ->
                         case doc of
                             Nothing ->

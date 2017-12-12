@@ -7,8 +7,26 @@ import Html.Attributes as Attr exposing (style)
 import Html.Events exposing (keyCode, on, onWithOptions)
 import HtmlParser exposing (..)
 import Json.Decode as Json
+import Regex exposing (..)
 import Types exposing (..)
 import Utils exposing (..)
+
+
+toReadableString : Int -> String
+toReadableString num =
+    let
+        handleMatch match =
+            case match.submatches of
+                first :: second :: _ ->
+                    Maybe.withDefault "" first ++ "," ++ Maybe.withDefault "" second
+
+                _ ->
+                    match.match
+    in
+    num
+        |> toString
+        |> replace (AtMost 1) (regex "(\\d)(\\d\\d\\d)$") handleMatch
+        |> replace (AtMost 1) (regex "(\\d)(\\d\\d\\d,\\d\\d\\d)$") handleMatch
 
 
 styles : List Style -> Attribute msg

@@ -8,6 +8,106 @@ import ServerIO exposing (encodeRefData)
 import Types exposing (..)
 
 
+getRefs : String -> Model -> List Ref
+getRefs docId model =
+    getDocRefs { model | currentDocId = docId }
+        |> List.map (\( _, refs ) -> refs)
+
+
+getTotals : List DocStats -> Stats
+getTotals docStats =
+    let
+        totalConf =
+            docStats
+                |> List.map (\( _, docStats ) -> docStats.stats.confirmed)
+                |> List.foldr (+) 0
+
+        totalLow =
+            docStats
+                |> List.map (\( _, docStats ) -> docStats.stats.lowConfidence)
+                |> List.foldr (+) 0
+
+        totalInvalid =
+            docStats
+                |> List.map (\( _, docStats ) -> docStats.stats.invalid)
+                |> List.foldr (+) 0
+    in
+    { confirmed = totalConf
+    , lowConfidence = totalLow
+    , invalid = totalInvalid
+    }
+
+
+getDashboard : Model -> DocDict -> Dashboard
+getDashboard model trueDocs =
+    let
+        docStats =
+            trueDocs
+                |> Dict.toList
+                |> List.map
+                    (\( docId, doc ) ->
+                        ( docId
+                        , { name = doc.name
+                          , stats =
+                                getRefs docId model
+                                    |> getDocRefCounts
+                          }
+                        )
+                    )
+
+        totals =
+            getTotals docStats
+    in
+    { totals = totals
+    , docStats = docStats
+    }
+
+
+getDocRefCounts : List Ref -> Stats
+getDocRefCounts refList =
+    let
+        confCnt =
+            getRefCount (Confirm Confirmed) refList
+
+        lowCnt =
+            getRefCount (RefConf NotFull) refList
+
+        invalidCnt =
+            getRefCount (RefVal Invalid) refList
+    in
+    { confirmed = confCnt
+    , lowConfidence = lowCnt
+    , invalid = invalidCnt
+    }
+
+
+updateDashboard : String -> Model -> Dashboard
+updateDashboard blockId model =
+    let
+        docStats =
+            model.dashboard.docStats
+                |> List.map
+                    (\( id, docStat ) ->
+                        if contains (regex ("^" ++ id)) blockId then
+                            ( id
+                            , { docStat
+                                | stats =
+                                    getRefs id model
+                                        |> getDocRefCounts
+                              }
+                            )
+                        else
+                            ( id, docStat )
+                    )
+
+        totals =
+            getTotals docStats
+    in
+    { totals = totals
+    , docStats = docStats
+    }
+
+
 getOsisWithRefId : RefId -> BlockDict -> Osis
 getOsisWithRefId refId blocks =
     let
@@ -132,7 +232,7 @@ getNearbyIdOfDict navDir currentId dict =
 
 getNearbyDocId : NavDir -> Model -> String
 getNearbyDocId navDir model =
-    getNearbyIdOfDict navDir model.currentDocId model.percivalData.docs
+    getNearbyIdOfDict navDir model.currentDocId model.docs
 
 
 getNearbyRefId : NavDir -> RefId -> RefIdArray -> RefId

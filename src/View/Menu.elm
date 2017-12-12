@@ -49,8 +49,7 @@ viewMenu model =
             , div
                 [ Attr.class "action-panel p-3"
                 , styles
-                    [ position fixed
-                    , bottom (pct 0)
+                    [ bottom (pct 0)
                     , Css.width (px 400)
                     , Css.height (px 515)
                     , minHeight (px 475)

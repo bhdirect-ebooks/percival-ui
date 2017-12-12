@@ -14,15 +14,21 @@ import View exposing (viewOrError)
 
 initialModel : Model
 initialModel =
-    { percivalData =
-        { volumeTitle = ""
-        , parserOpts =
-            { versification = ""
-            , language = ""
-            }
-        , docs = Dict.fromList []
-        , blocks = Dict.fromList []
+    { volumeTitle = ""
+    , parserOpts =
+        { versification = ""
+        , language = ""
         }
+    , dashboard =
+        { totals =
+            { confirmed = 0
+            , lowConfidence = 0
+            , invalid = 0
+            }
+        , docStats = []
+        }
+    , showDash = True
+    , docs = Dict.fromList []
     , blockState =
         UndoList.fresh
             { changedBlockId = ""

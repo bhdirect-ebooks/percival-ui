@@ -16,6 +16,7 @@ decodePercivalData =
         |> required "opts" decodeOpts
         |> required "docs" decodeDocDict
         |> required "blocks" decodeBlockDict
+        |> required "fs_docs" decodeDocDict
 
 
 decodeOpts : Decoder Opts

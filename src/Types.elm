@@ -17,6 +17,10 @@ type NavDir
     = Prev
     | Next
 
+type DocNav
+    = ByDir NavDir
+    | ById String
+
 
 type Confidence
     = NotFull
@@ -54,7 +58,11 @@ type alias RefStuff =
 
 
 type alias Model =
-    { percivalData : PercivalData
+    { volumeTitle : String
+    , parserOpts : Opts
+    , dashboard : Dashboard
+    , showDash : Bool
+    , docs : DocDict
     , blockState : UndoList State
     , currentDocId : String
     , currentRefId : RefId
@@ -89,11 +97,29 @@ type alias State =
     }
 
 
+type alias Dashboard =
+    { totals : Stats
+    , docStats : List DocStats
+    }
+
+
+type alias DocStats =
+    ( String, { name : String, stats : Stats } )
+
+
+type alias Stats =
+    { confirmed : Int
+    , lowConfidence : Int
+    , invalid : Int
+    }
+
+
 type alias PercivalData =
     { volumeTitle : String
     , parserOpts : Opts
     , docs : DocDict
     , blocks : BlockDict
+    , trueDocs : DocDict
     }
 
 
@@ -176,9 +202,11 @@ type Msg
     | ComboMsg Keyboard.Combo.Msg
     | Undo
     | Redo
+    | ToggleDash
     | ToggleHelp
     | ListRefsByType (Maybe RefType)
-    | ToDoc NavDir
+    | ToDocFromDash String
+    | ToDoc DocNav
     | ToRef NavDir (Maybe Confirmation)
     | HandleBlockRefClick RefId
     | HandleListRefClick RefId
