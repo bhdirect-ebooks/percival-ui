@@ -17,6 +17,7 @@ type NavDir
     = Prev
     | Next
 
+
 type DocNav
     = ByDir NavDir
     | ById String
