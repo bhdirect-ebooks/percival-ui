@@ -412,7 +412,7 @@ getUpdatedBlock origTagRegex { refId, ref, refDP } block =
                         |> Dict.update refId (always (Just newRef))
 
                 newTag =
-                    "<a data-cross-ref='"
+                    "<a data-ref='"
                         ++ Encode.encode 0 (encodeRefData newRef.data)
                         ++ "'>"
                         ++ ref.text
@@ -439,7 +439,7 @@ updateBlockRef refId refDP block =
             let
                 origTagRegex =
                     regex
-                        ("<a data-cross-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
+                        ("<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
                             ++ ref.data.scripture
                             ++ "[^}]+}(\"|')>"
                             ++ escape ref.text
