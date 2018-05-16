@@ -1,7 +1,6 @@
 module Utils exposing (..)
 
 import Array exposing (..)
-import Debug exposing (log)
 import Dict exposing (..)
 import Json.Encode as Encode
 import Regex exposing (..)
@@ -388,49 +387,49 @@ isInRefIdArray refId refIdArray =
         |> not
 
 
-getTagRegex : Maybe RefId -> Osis -> String -> Regex
+getTagRegex : RefId -> Osis -> String -> Regex
 getTagRegex refId osis text =
     let
         startString =
-            case refId of
-                Nothing ->
-                    ""
-
-                Just refId ->
-                    "<!-- RefId: " ++ refId ++ " -->"
+            getMarker refId
     in
     regex
         (startString
-            ++ "<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
-            ++ osis
-            ++ "[^}]+}(\"|')>"
+            ++ "<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture[^}]+}(\"|')>"
             ++ escape text
             ++ "</a>"
         )
 
 
-getMarkerList : ( RefId, Ref ) -> MarkerData
-getMarkerList ( k, v ) =
-    let
-        existingRegex =
-            getTagRegex Nothing v.data.scripture v.text
-
-        marker =
-            "<!-- RefId: " ++ k ++ " -->"
-    in
-    log "marker_data" { find = existingRegex, marker = marker }
+getMarker : RefId -> String
+getMarker refId =
+    "<!-- RefId: " ++ refId ++ " -->"
 
 
 addMarkersToHtml : RefDict -> String -> String
 addMarkersToHtml refs html =
-    Dict.toList refs
-        |> List.map getMarkerList
-        |> List.foldl (\{ find, marker } acc -> replace (AtMost 1) find (\{ match } -> marker ++ match) acc) html
+    let
+        refStartPattern =
+            regex "<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
+
+        tempMarker =
+            regex "<!-- RefId -->"
+
+        newHtml =
+            replace All refStartPattern (\{ match } -> "<!-- RefId -->" ++ match) html
+    in
+    Dict.keys refs
+        |> List.map getMarker
+        |> List.foldl
+            (\marker acc ->
+                replace (AtMost 1) tempMarker (\{ match } -> marker) acc
+            )
+            newHtml
 
 
 removeMarkersFromHtml : String -> String
 removeMarkersFromHtml html =
-    html |> replace All (regex "<!-- RefId: \\d+ -->") (\_ -> "")
+    html |> replace All (regex "<!-- RefId: [^>]+ -->") (\_ -> "")
 
 
 getUpdatedBlock : Regex -> RefStuff -> Block -> Block
@@ -445,11 +444,11 @@ getUpdatedBlock tagRegex { refId, ref, refDP } block =
                 newHtml =
                     block.html
                         |> addMarkersToHtml block.refs
-                        |> log "markers"
-                        |> replace (AtMost 1) tagRegex (\_ -> ref.text)
-                        |> log "replaced"
+                        |> replace (AtMost 1)
+                            tagRegex
+                            (\_ -> ref.text)
+                        |> Debug.log "removed"
                         |> removeMarkersFromHtml
-                        |> log "removed_markers"
             in
             { block | html = newHtml, refs = newRefDict }
 
@@ -491,7 +490,7 @@ updateBlockRef refId refDP block =
         Just ref ->
             let
                 tagRegex =
-                    getTagRegex (Just refId) ref.data.scripture ref.text
+                    getTagRegex refId ref.data.scripture ref.text
 
                 refStuff =
                     { refId = refId
