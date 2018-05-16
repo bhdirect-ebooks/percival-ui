@@ -397,20 +397,13 @@ update msg model =
                                     }
 
                         iterimModel =
-                            if refDP == Remove then
-                                { model
-                                    | blockState = newBlockState
-                                    , isSaving = True
-                                    , currentRefId = ""
-                                }
-                            else
-                                { model
-                                    | blockState = newBlockState
-                                    , isSaving = True
-                                }
+                            { model
+                                | blockState = newBlockState
+                                , isSaving = True
+                            }
 
                         ( newModel, cmd ) =
-                            if refDP == UserConf Confirmed then
+                            if (refDP == UserConf Confirmed) || (refDP == Remove) then
                                 update (ToRef Next (Just Unconfirmed)) iterimModel
                             else
                                 ( { iterimModel

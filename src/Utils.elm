@@ -1,6 +1,7 @@
 module Utils exposing (..)
 
 import Array exposing (..)
+import Debug exposing (log)
 import Dict exposing (..)
 import Json.Encode as Encode
 import Regex exposing (..)
@@ -387,8 +388,53 @@ isInRefIdArray refId refIdArray =
         |> not
 
 
+getTagRegex : Maybe RefId -> Osis -> String -> Regex
+getTagRegex refId osis text =
+    let
+        startString =
+            case refId of
+                Nothing ->
+                    ""
+
+                Just refId ->
+                    "<!-- RefId: " ++ refId ++ " -->"
+    in
+    regex
+        (startString
+            ++ "<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
+            ++ osis
+            ++ "[^}]+}(\"|')>"
+            ++ escape text
+            ++ "</a>"
+        )
+
+
+getMarkerList : ( RefId, Ref ) -> MarkerData
+getMarkerList ( k, v ) =
+    let
+        existingRegex =
+            getTagRegex Nothing v.data.scripture v.text
+
+        marker =
+            "<!-- RefId: " ++ k ++ " -->"
+    in
+    log "marker_data" { find = existingRegex, marker = marker }
+
+
+addMarkersToHtml : RefDict -> String -> String
+addMarkersToHtml refs html =
+    Dict.toList refs
+        |> List.map getMarkerList
+        |> List.foldl (\{ find, marker } acc -> replace (AtMost 1) find (\{ match } -> marker ++ match) acc) html
+
+
+removeMarkersFromHtml : String -> String
+removeMarkersFromHtml html =
+    html |> replace All (regex "<!-- RefId: \\d+ -->") (\_ -> "")
+
+
 getUpdatedBlock : Regex -> RefStuff -> Block -> Block
-getUpdatedBlock origTagRegex { refId, ref, refDP } block =
+getUpdatedBlock tagRegex { refId, ref, refDP } block =
     case refDP of
         Remove ->
             let
@@ -398,7 +444,12 @@ getUpdatedBlock origTagRegex { refId, ref, refDP } block =
 
                 newHtml =
                     block.html
-                        |> replace (AtMost 1) origTagRegex (\_ -> ref.text)
+                        |> addMarkersToHtml block.refs
+                        |> log "markers"
+                        |> replace (AtMost 1) tagRegex (\_ -> ref.text)
+                        |> log "replaced"
+                        |> removeMarkersFromHtml
+                        |> log "removed_markers"
             in
             { block | html = newHtml, refs = newRefDict }
 
@@ -420,7 +471,9 @@ getUpdatedBlock origTagRegex { refId, ref, refDP } block =
 
                 newHtml =
                     block.html
-                        |> replace (AtMost 1) origTagRegex (\_ -> newTag)
+                        |> addMarkersToHtml block.refs
+                        |> replace (AtMost 1) tagRegex (\_ -> newTag)
+                        |> removeMarkersFromHtml
             in
             { block | html = newHtml, refs = newRefDict }
 
@@ -437,14 +490,8 @@ updateBlockRef refId refDP block =
 
         Just ref ->
             let
-                origTagRegex =
-                    regex
-                        ("<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
-                            ++ ref.data.scripture
-                            ++ "[^}]+}(\"|')>"
-                            ++ escape ref.text
-                            ++ "</a>"
-                        )
+                tagRegex =
+                    getTagRegex (Just refId) ref.data.scripture ref.text
 
                 refStuff =
                     { refId = refId
@@ -452,7 +499,7 @@ updateBlockRef refId refDP block =
                     , refDP = refDP
                     }
             in
-            getUpdatedBlock origTagRegex refStuff block
+            getUpdatedBlock tagRegex refStuff block
 
 
 getRevisedAltList : Osis -> RefData -> List Osis

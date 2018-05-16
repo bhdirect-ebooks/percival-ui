@@ -5,6 +5,7 @@ import Dict
 import Dom
 import Http
 import Keyboard.Combo
+import Regex
 import UndoList exposing (UndoList)
 
 
@@ -194,6 +195,12 @@ type alias Messages =
 
 type alias ValidatorMessage =
     { message : String }
+
+
+type alias MarkerData =
+    { find : Regex.Regex
+    , marker : String
+    }
 
 
 type Msg
