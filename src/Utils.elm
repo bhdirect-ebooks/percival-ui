@@ -444,10 +444,7 @@ getUpdatedBlock tagRegex { refId, ref, refDP } block =
                 newHtml =
                     block.html
                         |> addMarkersToHtml block.refs
-                        |> replace (AtMost 1)
-                            tagRegex
-                            (\_ -> ref.text)
-                        |> Debug.log "removed"
+                        |> replace (AtMost 1) tagRegex (\_ -> ref.text)
                         |> removeMarkersFromHtml
             in
             { block | html = newHtml, refs = newRefDict }
