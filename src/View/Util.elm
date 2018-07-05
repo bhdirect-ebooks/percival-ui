@@ -116,7 +116,7 @@ processElement orig currentRefId tagName attrs children =
 isScriptureRef : Attributes -> Bool
 isScriptureRef attrs =
     attrs
-        |> List.filter (\( name, value ) -> name == "data-ref" && String.contains "scripture" value)
+        |> List.filter (\( name, value ) -> name == "data-ref")
         |> List.isEmpty
         |> not
 

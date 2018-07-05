@@ -387,49 +387,15 @@ isInRefIdArray refId refIdArray =
         |> not
 
 
-getTagRegex : RefId -> Osis -> String -> Regex
-getTagRegex refId osis text =
-    let
-        startString =
-            getMarker refId
-    in
+getTagRegex : RefId -> String -> Regex
+getTagRegex refId text =
     regex
-        (startString
-            ++ "<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture[^}]+}(\"|')>"
+        ("<a data-ref[^>]+?"
+            ++ refId
+            ++ "[^>]+>"
             ++ escape text
             ++ "</a>"
         )
-
-
-getMarker : RefId -> String
-getMarker refId =
-    "<!-- RefId: " ++ refId ++ " -->"
-
-
-addMarkersToHtml : RefDict -> String -> String
-addMarkersToHtml refs html =
-    let
-        refStartPattern =
-            regex "<a data-ref=(?:\"|'){(?:&quot;|\\\")scripture(?:&quot;|\\\"):(?:&quot;|\\\")"
-
-        tempMarker =
-            regex "<!-- RefId -->"
-
-        newHtml =
-            replace All refStartPattern (\{ match } -> "<!-- RefId -->" ++ match) html
-    in
-    Dict.keys refs
-        |> List.map getMarker
-        |> List.foldl
-            (\marker acc ->
-                replace (AtMost 1) tempMarker (\{ match } -> marker) acc
-            )
-            newHtml
-
-
-removeMarkersFromHtml : String -> String
-removeMarkersFromHtml html =
-    html |> replace All (regex "<!-- RefId: [^>]+ -->") (\_ -> "")
 
 
 getUpdatedBlock : Regex -> RefStuff -> Block -> Block
@@ -443,9 +409,7 @@ getUpdatedBlock tagRegex { refId, ref, refDP } block =
 
                 newHtml =
                     block.html
-                        |> addMarkersToHtml block.refs
                         |> replace (AtMost 1) tagRegex (\_ -> ref.text)
-                        |> removeMarkersFromHtml
             in
             { block | html = newHtml, refs = newRefDict }
 
@@ -459,17 +423,17 @@ getUpdatedBlock tagRegex { refId, ref, refDP } block =
                         |> Dict.update refId (always (Just newRef))
 
                 newTag =
-                    "<a data-ref='"
-                        ++ Encode.encode 0 (encodeRefData newRef.data)
-                        ++ "'>"
+                    "<a data-ref=\""
+                        ++ newRef.data.scripture
+                        ++ "\" id=\""
+                        ++ refId
+                        ++ "\">"
                         ++ ref.text
                         ++ "</a>"
 
                 newHtml =
                     block.html
-                        |> addMarkersToHtml block.refs
                         |> replace (AtMost 1) tagRegex (\_ -> newTag)
-                        |> removeMarkersFromHtml
             in
             { block | html = newHtml, refs = newRefDict }
 
@@ -487,7 +451,7 @@ updateBlockRef refId refDP block =
         Just ref ->
             let
                 tagRegex =
-                    getTagRegex refId ref.data.scripture ref.text
+                    getTagRegex refId ref.text
 
                 refStuff =
                     { refId = refId
