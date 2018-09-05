@@ -143,7 +143,7 @@ getRefListId refId =
 
 getBlockIdFromRefId : RefId -> String
 getBlockIdFromRefId refId =
-    Regex.replace (AtMost 1) (regex "-\\d\\d\\d$") (\_ -> "") refId
+    Regex.replace (AtMost 1) (regex "-\\d\\d\\d\\d$") (\_ -> "") refId
 
 
 belongsToDoc : String -> String -> Bool
