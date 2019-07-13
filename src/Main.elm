@@ -1,4 +1,9 @@
-module Main exposing (..)
+module Main exposing
+    ( initialCmd
+    , initialModel
+    , main
+    , subscriptions
+    )
 
 import Array
 import Dict
@@ -72,6 +77,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.inEditMode then
         Sub.batch [ clickedRef HandleBlockRefClick ]
+
     else
         Sub.batch
             [ Keyboard.Combo.subscriptions model.keys

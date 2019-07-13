@@ -14,6 +14,7 @@ viewActionButtons { viewAltRefs, inEditMode } data =
         confAttr =
             if data.confirmed || not data.valid || inEditMode then
                 Attr.disabled True
+
             else
                 onClick (ChangeRefData (UserConf Confirmed))
 
@@ -21,14 +22,17 @@ viewActionButtons { viewAltRefs, inEditMode } data =
             if data.valid && not (List.isEmpty data.possible) then
                 if List.length data.possible == 1 then
                     viewSingleAltButton inEditMode data.possible
+
                 else
                     viewDropdownButton inEditMode viewAltRefs data.possible
+
             else
                 span [] []
 
         rmvAttr =
             if inEditMode then
                 Attr.disabled True
+
             else
                 onClick (ChangeRefData Remove)
     in
@@ -75,6 +79,7 @@ viewSingleAltButton inEditMode possible =
         altAttr =
             if inEditMode || text == "" then
                 Attr.disabled True
+
             else
                 onClick (ChangeRefData (Scripture text))
     in
@@ -96,12 +101,14 @@ viewDropdownButton inEditMode showAlt alternates =
         ariaExpanded =
             if showAlt then
                 "true"
+
             else
                 "false"
 
         dropAttr =
             if inEditMode then
                 Attr.disabled True
+
             else
                 onClick ToggleAltRefs
     in

@@ -1,4 +1,25 @@
-module ServerIO exposing (..)
+module ServerIO exposing
+    ( decodeBlock
+    , decodeBlockDict
+    , decodeDoc
+    , decodeDocDict
+    , decodeMessages
+    , decodeOpts
+    , decodePercivalData
+    , decodeRef
+    , decodeRefData
+    , decodeRefDict
+    , decodeValidatorMessage
+    , encodeRef
+    , encodeRefData
+    , encodeRefsObj
+    , fetchScripText
+    , postBlock
+    , postContext
+    , postFieldInput
+    , postNewHtml
+    , postValidateHtml
+    )
 
 import Dict exposing (..)
 import Http exposing (..)

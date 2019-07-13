@@ -24,14 +24,17 @@ viewRefActions currentRef model =
                 colorType =
                     if invalid then
                         "danger"
+
                     else if isConfirmed ref then
                         "success"
+
                     else
                         "warning"
 
                 osisOrMessage =
                     if invalid then
                         ref.data.message
+
                     else
                         ref.data.scripture
 

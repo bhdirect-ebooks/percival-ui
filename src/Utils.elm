@@ -1,4 +1,40 @@
-module Utils exposing (..)
+module Utils exposing
+    ( assignConfType
+    , belongsToDoc
+    , filterRefs
+    , findIndexByValue
+    , getBlockIdFromRefId
+    , getDashboard
+    , getDocBlocks
+    , getDocRefArray
+    , getDocRefCounts
+    , getDocRefs
+    , getFirstIdOfDict
+    , getListedRefArray
+    , getNearbyDocId
+    , getNearbyIdOfArray
+    , getNearbyIdOfDict
+    , getNearbyRefId
+    , getNearbyUnconfId
+    , getOsisWithRefId
+    , getRefCount
+    , getRefListId
+    , getRefs
+    , getRevisedAltList
+    , getTagRegex
+    , getTotals
+    , getUpdatedBlock
+    , isConfirmed
+    , isFullConf
+    , isInRefIdArray
+    , isInvalid
+    , isLowConf
+    , isUnconfirmed
+    , toSimpleRefTup
+    , updateBlockRef
+    , updateDashboard
+    , updateRefData
+    )
 
 import Array exposing (..)
 import Dict exposing (..)
@@ -96,6 +132,7 @@ updateDashboard blockId model =
                                         |> getDocRefCounts
                               }
                             )
+
                         else
                             ( id, docStat )
                     )
@@ -130,6 +167,7 @@ getOsisWithRefId refId blocks =
                                         Just ref ->
                                             if ref.data.valid then
                                                 ref.data.scripture
+
                                             else
                                                 ref.data.message
                                )
@@ -197,6 +235,7 @@ getNearbyIdOfArray navDir currentId keysArray =
         targetIndex =
             if currentId == "" then
                 0
+
             else
                 let
                     currentIndex =
@@ -473,18 +512,22 @@ getRevisedAltList newOsis data =
             if List.member currentOsis data.possible then
                 data.possible
                     |> List.filter (\altOsis -> not (altOsis == newOsis))
+
             else
                 data.possible
                     |> List.map
                         (\altOsis ->
                             if altOsis == newOsis then
                                 currentOsis
+
                             else
                                 altOsis
                         )
+
         else
             data.possible
                 |> List.append [ currentOsis ]
+
     else
         data.possible
 
@@ -535,6 +578,7 @@ updateRefData ref refDP =
                             , confirmed = False
                             , possible = altList
                         }
+
                     else
                         data
 

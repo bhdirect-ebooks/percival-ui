@@ -54,6 +54,7 @@ viewRefContent ref model =
                             ]
                         ]
                     ]
+
             else if model.viewScriptureText then
                 div
                     [ Attr.class "container ml-0"
@@ -97,6 +98,7 @@ viewRefContent ref model =
                             )
                         ]
                     ]
+
             else
                 button
                     [ type_ "button"

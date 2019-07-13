@@ -25,6 +25,7 @@ viewBlock blockId block model =
     in
     if editorActive && model.editingBlockId == blockId then
         viewEditor blockId model
+
     else
         div
             [ Attr.class "blocks"

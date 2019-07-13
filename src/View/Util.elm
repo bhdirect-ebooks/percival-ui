@@ -1,4 +1,4 @@
-module View.Util exposing (..)
+module View.Util exposing (getChildNodes, getKeyValueIfInDict, getRefNode, isScriptureRef, onClickNoop, onEnter, processElement, processNode, processNodes, styles, toReadableString)
 
 import Css exposing (..)
 import Dict exposing (..)
@@ -51,6 +51,7 @@ onEnter msg =
         isEnter code =
             if code == 13 then
                 Json.succeed msg
+
             else
                 Json.fail "not ENTER"
     in
@@ -107,8 +108,10 @@ processElement orig currentRefId tagName attrs children =
     in
     if isRefTag then
         getRefNode (Tuple.second orig) currentRefId
+
     else if hasChildren then
         getChildNodes orig currentRefId tagName attrs children
+
     else
         orig
 
@@ -153,8 +156,10 @@ getRefNode refs currentRefId =
                 Just goodRef ->
                     if isInvalid goodRef then
                         "danger"
+
                     else if isConfirmed goodRef then
                         "success"
+
                     else
                         "warning"
 
@@ -172,6 +177,7 @@ getRefNode refs currentRefId =
                                     , colorType
                                     , " p-1 ref ref--selected"
                                     ]
+
                             else
                                 String.concat
                                     [ "btn-outline-"

@@ -1,4 +1,4 @@
-module View.Main exposing (..)
+module View.Main exposing (viewMain)
 
 import Css exposing (..)
 import Dict exposing (..)

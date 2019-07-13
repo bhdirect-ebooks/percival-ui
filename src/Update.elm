@@ -1,4 +1,11 @@
-port module Update exposing (..)
+port module Update exposing
+    ( backtoTop
+    , clickedRef
+    , keyboardCombos
+    , scrollDoc
+    , scrollList
+    , update
+    )
 
 import Dict exposing (..)
 import Dom
@@ -151,6 +158,7 @@ update msg model =
                             , osisField = osisOrMessage
                         }
                             ! [ postBlock blockId block ]
+
             else
                 model ! []
 
@@ -193,6 +201,7 @@ update msg model =
                             , osisField = osisOrMessage
                         }
                             ! [ postBlock blockId block ]
+
             else
                 model ! []
 
@@ -207,6 +216,7 @@ update msg model =
                 newModel =
                     if mayRefType == model.selectedRefType then
                         { model | selectedRefType = Nothing }
+
                     else
                         { model | selectedRefType = mayRefType }
 
@@ -230,6 +240,7 @@ update msg model =
             in
             if selectedDoc == model.currentDocId || model.inEditMode then
                 model ! []
+
             else
                 let
                     newModel =
@@ -276,6 +287,7 @@ update msg model =
             in
             if model.currentRefId == selectedRef || model.inEditMode then
                 model ! []
+
             else
                 { model
                     | currentRefId = selectedRef
@@ -297,6 +309,7 @@ update msg model =
                 newModel =
                     if isGoodRef && isListedRef then
                         model
+
                     else
                         { model | selectedRefType = Nothing }
 
@@ -319,6 +332,7 @@ update msg model =
                     , osisField = osisOrMessage
                 }
                     ! [ scrollList refListId ]
+
             else
                 model ! []
 
@@ -332,6 +346,7 @@ update msg model =
             in
             if model.currentRefId == refId || model.inEditMode then
                 model ! []
+
             else
                 { model
                     | currentRefId = refId
@@ -405,6 +420,7 @@ update msg model =
                         ( newModel, cmd ) =
                             if (refDP == UserConf Confirmed) || (refDP == Remove) then
                                 update (ToRef Next (Just Unconfirmed)) iterimModel
+
                             else
                                 ( { iterimModel
                                     | viewScriptureText = False
@@ -445,6 +461,7 @@ update msg model =
             in
             if model.osisField == "" then
                 { model | badInput = True } ! [ Task.attempt (\_ -> DoNothing) (Dom.focus "osis-field") ]
+
             else if not (model.osisField == currentOsisOrMess) then
                 { model
                     | inEditMode = False
@@ -456,6 +473,7 @@ update msg model =
                     ! [ Task.attempt (\_ -> DoNothing) (Dom.blur "osis-field")
                       , postFieldInput model.osisField model.parserOpts
                       ]
+
             else
                 { model
                     | inEditMode = False
@@ -482,6 +500,7 @@ update msg model =
                                 , editingOsis = False
                                 , osisField = refData.scripture
                             }
+
                     else
                         update (ChangeRefData (UserVal Invalid refData.message))
                             { model
@@ -494,6 +513,7 @@ update msg model =
                 domCmd =
                     if refData.valid then
                         Dom.blur "osis-field"
+
                     else
                         Dom.focus "osis-field"
 
@@ -528,6 +548,7 @@ update msg model =
                     , editingBlockId = blockId
                 }
                     ! [ postContext blockId model.contextField model.parserOpts, blurTask ]
+
             else
                 model ! [ blurTask ]
 
@@ -596,6 +617,7 @@ update msg model =
             if model.htmlSource == "" then
                 { model | htmlValidation = [ "Cannot be empty." ] }
                     ! [ Task.attempt (\_ -> DoNothing) (Dom.focus model.editingBlockId) ]
+
             else
                 { model | isValidating = True } ! [ postValidateHtml model.htmlSource ]
 
@@ -611,6 +633,7 @@ update msg model =
                     , isSaving = True
                 }
                     ! [ postNewHtml model.editingBlockId model.htmlSource ]
+
             else
                 { model
                     | htmlValidation = [ toString err ]
@@ -631,6 +654,7 @@ update msg model =
             in
             if List.isEmpty msgList then
                 { newModel | isSaving = True } ! [ postNewHtml model.editingBlockId model.htmlSource ]
+
             else
                 newModel ! [ Task.attempt (\_ -> DoNothing) (Dom.focus model.editingBlockId) ]
 

@@ -14,8 +14,10 @@ viewOsisField { editingOsis, osisField, badInput } =
         editClasses =
             if badInput then
                 Attr.class "w-100 no-no shake-effect"
+
             else if osisField == "" then
                 Attr.class "w-100 no-no"
+
             else
                 Attr.class "w-100"
 
@@ -30,6 +32,7 @@ viewOsisField { editingOsis, osisField, badInput } =
                 , onEnter ChangeOsis
                 , styles [ color (hex "29363d") ]
                 ]
+
             else
                 [ Attr.class "border-0 b text-uppercase w-100"
                 , Attr.value osisField

@@ -1,4 +1,37 @@
-module Types exposing (..)
+module Types exposing
+    ( Block
+    , BlockDict
+    , Confidence(..)
+    , Confirmation(..)
+    , Dashboard
+    , Doc
+    , DocDict
+    , DocNav(..)
+    , DocStats
+    , EditorTheme(..)
+    , MarkerData
+    , Messages
+    , Model
+    , Msg(..)
+    , NavDir(..)
+    , Opts
+    , Osis
+    , PercivalData
+    , Ref
+    , RefData
+    , RefDataPoint(..)
+    , RefDict
+    , RefId
+    , RefIdArray
+    , RefStuff
+    , RefType(..)
+    , ScrollDoc
+    , ScrollList
+    , State
+    , Stats
+    , ValidatorMessage
+    , Validity(..)
+    )
 
 import Array
 import Dict
