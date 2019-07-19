@@ -373,6 +373,9 @@ update msg model =
         ShowScripture osis ->
             { model | viewScriptureText = True } ! [ fetchScripText osis ]
 
+        HideScripture ->
+            { model | viewScriptureText = False } ! []
+
         HandlePostResponse (Err err) ->
             let
                 _ =

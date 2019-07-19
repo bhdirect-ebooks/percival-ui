@@ -254,6 +254,7 @@ type Msg
     | ToggleAltRefs
     | SetScripText (Result Http.Error String)
     | ShowScripture Osis
+    | HideScripture
     | HandlePostResponse (Result Http.Error Block)
     | ChangeRefData RefDataPoint
     | EditOsis
