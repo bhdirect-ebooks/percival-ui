@@ -8,15 +8,15 @@ import Types exposing (..)
 import View.Util exposing (styles)
 
 
-viewActionButtons : Model -> Maybe RefData -> Html Msg
-viewActionButtons { viewAltRefs, inEditMode } maybeData =
+viewActionButtons : Model -> RefAction -> Html Msg
+viewActionButtons { viewAltRefs, inEditMode } action =
     let
         buttons =
-            case maybeData of
-                Nothing ->
-                    viewMultipleActions inEditMode
+            case action of
+                Multiple data ->
+                    viewMultipleActions inEditMode data
 
-                Just data ->
+                Single data ->
                     viewSingleActions viewAltRefs inEditMode data
     in
     div [ Attr.class "row b mt-4" ]
@@ -69,11 +69,12 @@ getRemoveAttributes predicate =
         onClick (ChangeRefData Remove)
 
 
-viewMultipleActions : Bool -> List (Html Msg)
-viewMultipleActions inEditMode =
+viewMultipleActions : Bool -> ( Validity, Confirmation ) -> List (Html Msg)
+viewMultipleActions inEditMode ( validity, confirmation ) =
     let
         confAttr =
-            getConfirmAttributes inEditMode
+            getConfirmAttributes
+                (inEditMode || validity == Invalid || confirmation == Confirmed)
 
         rmvAttr =
             getRemoveAttributes inEditMode

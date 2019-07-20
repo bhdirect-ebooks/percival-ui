@@ -2,16 +2,20 @@ module View.Util exposing
     ( getChildNodes
     , getKeyValueIfInDict
     , getRefNode
+    , getRefsByListed
     , isScriptureRef
     , onClickNoop
     , onEnter
     , processElement
     , processNode
     , processNodes
+    , refListConfirmation
+    , refListValidity
     , styles
     , toReadableString
     )
 
+import Array
 import Css exposing (..)
 import Dict exposing (..)
 import Html exposing (..)
@@ -233,3 +237,48 @@ getKeyValueIfInDict refId refs =
 
         Just ref ->
             Just ( refId, ref )
+
+
+getRefsByListed : Model -> List RefData
+getRefsByListed model =
+    let
+        docRefs =
+            getDocRefs model
+                |> Dict.fromList
+    in
+    model.listedRefIds
+        |> Array.toList
+        |> List.filterMap (\( k, v ) -> getKeyValueIfInDict k docRefs)
+        |> List.map (\( k, v ) -> v.data)
+
+
+refListValidity : List RefData -> Validity
+refListValidity refDataList =
+    let
+        allValid =
+            refDataList
+                |> List.filter (\data -> not data.valid)
+                |> List.isEmpty
+    in
+    case allValid of
+        True ->
+            Valid
+
+        False ->
+            Invalid
+
+
+refListConfirmation : List RefData -> Confirmation
+refListConfirmation refDataList =
+    let
+        allConfirmed =
+            refDataList
+                |> List.filter (\data -> not data.confirmed)
+                |> List.isEmpty
+    in
+    case allConfirmed of
+        True ->
+            Confirmed
+
+        False ->
+            Unconfirmed

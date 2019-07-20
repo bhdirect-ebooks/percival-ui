@@ -18,6 +18,7 @@ module Types exposing
     , Osis
     , PercivalData
     , Ref
+    , RefAction(..)
     , RefData
     , RefDataPoint(..)
     , RefDict
@@ -37,7 +38,6 @@ import Array
 import Dict
 import Dom
 import Http
-import Json.Encode as E
 import Keyboard.Combo
 import Regex
 import UndoList exposing (UndoList)
@@ -77,6 +77,11 @@ type RefType
     = RefConf Confidence
     | RefVal Validity
     | Confirm Confirmation
+
+
+type RefAction
+    = Multiple ( Validity, Confirmation )
+    | Single RefData
 
 
 type RefDataPoint

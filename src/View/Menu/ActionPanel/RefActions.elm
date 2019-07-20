@@ -7,14 +7,24 @@ import Types exposing (..)
 import Utils exposing (..)
 import View.Menu.ActionPanel.ActionButtons exposing (viewActionButtons)
 import View.Menu.ActionPanel.OsisField exposing (viewOsisField)
-import View.Util exposing (styles)
+import View.Util exposing (getRefsByListed, refListConfirmation, refListValidity, styles)
 
 
 viewRefActions : Maybe Ref -> Bool -> Model -> Html Msg
 viewRefActions currentRef multiSelect model =
     if multiSelect then
+        let
+            refDataList =
+                getRefsByListed model
+
+            validity =
+                refListValidity refDataList
+
+            confirmation =
+                refListConfirmation refDataList
+        in
         div [ Attr.class "container-fluid m-0 p-0" ]
-            [ viewActionButtons model Nothing ]
+            [ viewActionButtons model (Multiple ( validity, confirmation )) ]
 
     else
         case currentRef of
@@ -81,5 +91,5 @@ viewSingleRefActions ref model =
                 [ Attr.class "col col-10 pl-0 d-inline-block text-truncate" ]
                 [ Html.small [] [ Html.text ref.text ] ]
             ]
-        , viewActionButtons model (Just ref.data)
+        , viewActionButtons model (Single ref.data)
         ]
