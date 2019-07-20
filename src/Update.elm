@@ -358,7 +358,11 @@ changeMultipleRefs refDP model =
 
         -- 6. set interim model
         ( newModel, cmd ) =
-            update ClearSelected interimModel
+            if refDP == Remove then
+                update ClearSelected interimModel
+
+            else
+                ( interimModel, Cmd.none )
 
         -- 7. prep commands
         batch =
