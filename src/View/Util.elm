@@ -1,4 +1,16 @@
-module View.Util exposing (getChildNodes, getKeyValueIfInDict, getRefNode, isScriptureRef, onClickNoop, onEnter, processElement, processNode, processNodes, styles, toReadableString)
+module View.Util exposing
+    ( getChildNodes
+    , getKeyValueIfInDict
+    , getRefNode
+    , isScriptureRef
+    , onClickNoop
+    , onEnter
+    , processElement
+    , processNode
+    , processNodes
+    , styles
+    , toReadableString
+    )
 
 import Css exposing (..)
 import Dict exposing (..)
@@ -58,8 +70,8 @@ onEnter msg =
     on "keydown" (Json.andThen isEnter keyCode)
 
 
-processNodes : List Node -> RefDict -> RefId -> ( List Node, RefDict )
-processNodes nodes refs currentRefId =
+processNodes : List Node -> RefDict -> RefId -> List RefId -> ( List Node, RefDict )
+processNodes nodes refs currentRefId selectedRefIds =
     let
         ( processedNode, remainingRefs ) =
             case List.head nodes of
@@ -67,7 +79,7 @@ processNodes nodes refs currentRefId =
                     ( Text "", refs )
 
                 Just node ->
-                    processNode node refs currentRefId
+                    processNode node refs currentRefId selectedRefIds
     in
     case List.tail nodes of
         Nothing ->
@@ -76,26 +88,26 @@ processNodes nodes refs currentRefId =
         Just nodesTail ->
             let
                 ( siblingNodes, trueRemaining ) =
-                    processNodes nodesTail remainingRefs currentRefId
+                    processNodes nodesTail remainingRefs currentRefId selectedRefIds
             in
             ( List.concat [ [ processedNode ], siblingNodes ], trueRemaining )
 
 
-processNode : Node -> RefDict -> RefId -> ( Node, RefDict )
-processNode node refs currentRefId =
+processNode : Node -> RefDict -> RefId -> List RefId -> ( Node, RefDict )
+processNode node refs currentRefId selectedRefIds =
     case node of
         Text str ->
             ( node, refs )
 
         Element tagName attrs children ->
-            processElement ( node, refs ) currentRefId tagName attrs children
+            processElement ( node, refs ) ( currentRefId, selectedRefIds ) tagName attrs children
 
         Comment str ->
             ( node, refs )
 
 
-processElement : ( Node, RefDict ) -> RefId -> String -> Attributes -> List Node -> ( Node, RefDict )
-processElement orig currentRefId tagName attrs children =
+processElement : ( Node, RefDict ) -> ( RefId, List RefId ) -> String -> Attributes -> List Node -> ( Node, RefDict )
+processElement orig refSelection tagName attrs children =
     let
         attrNames =
             Tuple.first (List.unzip attrs)
@@ -105,12 +117,15 @@ processElement orig currentRefId tagName attrs children =
 
         hasChildren =
             Basics.not (List.isEmpty children)
+
+        ( currentRefId, selectedRefIds ) =
+            refSelection
     in
     if isRefTag then
-        getRefNode (Tuple.second orig) currentRefId
+        getRefNode (Tuple.second orig) currentRefId selectedRefIds
 
     else if hasChildren then
-        getChildNodes orig currentRefId tagName attrs children
+        getChildNodes orig refSelection tagName attrs children
 
     else
         orig
@@ -124,17 +139,20 @@ isScriptureRef attrs =
         |> not
 
 
-getChildNodes : ( Node, RefDict ) -> RefId -> String -> Attributes -> List Node -> ( Node, RefDict )
-getChildNodes orig currentRefId tagName attrs children =
+getChildNodes : ( Node, RefDict ) -> ( RefId, List RefId ) -> String -> Attributes -> List Node -> ( Node, RefDict )
+getChildNodes orig refSelection tagName attrs children =
     let
+        ( currentRefId, selectedRefIds ) =
+            refSelection
+
         ( processedNodes, remainingRefs ) =
-            processNodes children (Tuple.second orig) currentRefId
+            processNodes children (Tuple.second orig) currentRefId selectedRefIds
     in
     ( Element tagName attrs processedNodes, remainingRefs )
 
 
-getRefNode : RefDict -> RefId -> ( Node, RefDict )
-getRefNode refs currentRefId =
+getRefNode : RefDict -> RefId -> List RefId -> ( Node, RefDict )
+getRefNode refs currentRefId selectedRefIds =
     let
         refId =
             getFirstIdOfDict refs
@@ -147,6 +165,9 @@ getRefNode refs currentRefId =
 
         isCurrent =
             currentRefId == refId
+
+        isSelected =
+            List.member refId selectedRefIds
 
         colorType =
             case ref of
@@ -171,7 +192,7 @@ getRefNode refs currentRefId =
                 Just goodRef ->
                     let
                         classes =
-                            if isCurrent then
+                            if isCurrent || isSelected then
                                 String.concat
                                     [ "btn-outline-"
                                     , colorType

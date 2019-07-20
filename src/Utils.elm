@@ -1,7 +1,6 @@
 module Utils exposing
     ( assignConfType
     , belongsToDoc
-    , filterRefs
     , findIndexByValue
     , getBlockIdFromRefId
     , getDashboard
@@ -11,6 +10,7 @@ module Utils exposing
     , getDocRefs
     , getFirstIdOfDict
     , getListedRefArray
+    , getListedRefArrayBySelected
     , getNearbyDocId
     , getNearbyIdOfArray
     , getNearbyIdOfDict
@@ -33,14 +33,13 @@ module Utils exposing
     , toSimpleRefTup
     , updateBlockRef
     , updateDashboard
+    , updateListofBlockRefs
     , updateRefData
     )
 
 import Array exposing (..)
 import Dict exposing (..)
-import Json.Encode as Encode
 import Regex exposing (..)
-import ServerIO exposing (encodeRefData)
 import Types exposing (..)
 
 
@@ -185,12 +184,21 @@ getBlockIdFromRefId refId =
 
 
 belongsToDoc : String -> String -> Bool
-belongsToDoc currentDocId blockKey =
+belongsToDoc currentDocId blockId =
     let
         docBlockRegex =
             String.concat [ "^", currentDocId ]
     in
-    contains (regex docBlockRegex) blockKey
+    contains (regex docBlockRegex) blockId
+
+
+belongsToBlock : String -> RefId -> Bool
+belongsToBlock blockId refId =
+    let
+        blockRegex =
+            String.concat [ "^", blockId ]
+    in
+    contains (regex blockRegex) refId
 
 
 getDocBlocks : Model -> BlockDict
@@ -382,8 +390,8 @@ getDocRefArray model =
         |> Array.fromList
 
 
-filterRefs : Maybe RefType -> List ( RefId, Ref ) -> List ( RefId, Ref )
-filterRefs mayRefType refTupList =
+filterRefsByType : Maybe RefType -> List ( RefId, Ref ) -> List ( RefId, Ref )
+filterRefsByType mayRefType refTupList =
     case mayRefType of
         Nothing ->
             refTupList
@@ -412,7 +420,20 @@ filterRefs mayRefType refTupList =
 getListedRefArray : Model -> RefIdArray
 getListedRefArray model =
     getDocRefs model
-        |> filterRefs model.selectedRefType
+        |> filterRefsByType model.selectedRefType
+        |> List.map toSimpleRefTup
+        |> Array.fromList
+
+
+filterRefsBySelected : List RefId -> List ( RefId, Ref ) -> List ( RefId, Ref )
+filterRefsBySelected refIdList refTupList =
+    List.filter (\( k, v ) -> List.member k refIdList) refTupList
+
+
+getListedRefArrayBySelected : Model -> RefIdArray
+getListedRefArrayBySelected model =
+    getDocRefs model
+        |> filterRefsBySelected model.selectedRefIds
         |> List.map toSimpleRefTup
         |> Array.fromList
 
@@ -499,6 +520,27 @@ updateBlockRef refId refDP block =
                     }
             in
             getUpdatedBlock tagRegex refStuff block
+
+
+doUpdateList : List RefId -> RefDataPoint -> Block -> Block
+doUpdateList refIdList refDP block =
+    case refIdList of
+        [] ->
+            block
+
+        head :: tail ->
+            block
+                |> updateBlockRef head refDP
+                |> doUpdateList tail refDP
+
+
+updateListofBlockRefs : List RefId -> RefDataPoint -> String -> Block -> Block
+updateListofBlockRefs refIdList refDP blockId block =
+    let
+        blockRefIds =
+            List.filter (\refId -> belongsToBlock blockId refId) refIdList
+    in
+    doUpdateList blockRefIds refDP block
 
 
 getRevisedAltList : Osis -> RefData -> List Osis

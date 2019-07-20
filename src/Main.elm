@@ -13,7 +13,9 @@ import Keyboard.Combo
 import ServerIO exposing (decodePercivalData)
 import Types exposing (..)
 import UndoList exposing (UndoList)
-import Update exposing (..)
+import Update exposing (update)
+import Update.KeyCombo exposing (keyboardCombos)
+import Update.SelectRefs exposing (clickedRef, multiSelect)
 import View exposing (viewOrError)
 
 
@@ -41,6 +43,7 @@ initialModel =
             }
     , currentDocId = ""
     , currentRefId = ""
+    , selectedRefIds = []
     , editingOsis = False
     , osisField = ""
     , badInput = False
@@ -76,12 +79,16 @@ initialCmd =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.inEditMode then
-        Sub.batch [ clickedRef HandleBlockRefClick ]
+        Sub.batch
+            [ clickedRef HandleBlockRefClick
+            , multiSelect HandleMultiSelect
+            ]
 
     else
         Sub.batch
             [ Keyboard.Combo.subscriptions model.keys
             , clickedRef HandleBlockRefClick
+            , multiSelect HandleMultiSelect
             ]
 
 

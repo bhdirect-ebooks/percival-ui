@@ -13,14 +13,14 @@ import View.Util exposing (processNodes)
 viewBlock : String -> Block -> Model -> Html Msg
 viewBlock blockId block model =
     let
-        { currentRefId, editorActive } =
+        { currentRefId, selectedRefIds, editorActive } =
             model
 
         parsed =
             HtmlParser.parse block.html
 
         nodes =
-            processNodes parsed block.refs currentRefId
+            processNodes parsed block.refs currentRefId selectedRefIds
                 |> Tuple.first
     in
     if editorActive && model.editingBlockId == blockId then

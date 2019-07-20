@@ -8,15 +8,92 @@ import Types exposing (..)
 import View.Util exposing (styles)
 
 
-viewActionButtons : Model -> RefData -> Html Msg
-viewActionButtons { viewAltRefs, inEditMode } data =
+viewActionButtons : Model -> Maybe RefData -> Html Msg
+viewActionButtons { viewAltRefs, inEditMode } maybeData =
+    let
+        buttons =
+            case maybeData of
+                Nothing ->
+                    viewMultipleActions inEditMode
+
+                Just data ->
+                    viewSingleActions viewAltRefs inEditMode data
+    in
+    div [ Attr.class "row b mt-4" ]
+        [ div [ Attr.class "col col-12" ]
+            [ div
+                [ attribute "aria-label" "Actions"
+                , Attr.class "btn-group w-100"
+                , attribute "role" "group"
+                ]
+                buttons
+            ]
+        ]
+
+
+viewConfirmButton : Attribute msg -> Html msg
+viewConfirmButton confAttr =
+    button
+        [ Attr.class "btn btn-success"
+        , type_ "button"
+        , confAttr
+        ]
+        [ Html.text "Confirm" ]
+
+
+viewRemoveButton : Attribute msg -> Html msg
+viewRemoveButton rmvAttr =
+    button
+        [ Attr.class "btn btn-outline-danger mr-1 ml-auto"
+        , type_ "button"
+        , rmvAttr
+        ]
+        [ Html.text "Remove" ]
+
+
+getConfirmAttributes : Bool -> Attribute Msg
+getConfirmAttributes predicate =
+    if predicate then
+        Attr.disabled True
+
+    else
+        onClick (ChangeRefData (UserConf Confirmed))
+
+
+getRemoveAttributes : Bool -> Attribute Msg
+getRemoveAttributes predicate =
+    if predicate then
+        Attr.disabled True
+
+    else
+        onClick (ChangeRefData Remove)
+
+
+viewMultipleActions : Bool -> List (Html Msg)
+viewMultipleActions inEditMode =
     let
         confAttr =
-            if data.confirmed || not data.valid || inEditMode then
-                Attr.disabled True
+            getConfirmAttributes inEditMode
 
-            else
-                onClick (ChangeRefData (UserConf Confirmed))
+        rmvAttr =
+            getRemoveAttributes inEditMode
+    in
+    [ viewConfirmButton confAttr
+    , button
+        [ type_ "button"
+        , Attr.class "btn btn-outline-secondary ml-auto"
+        , onClick ClearSelected
+        ]
+        [ Html.text "Clear Selection" ]
+    , viewRemoveButton rmvAttr
+    ]
+
+
+viewSingleActions : Bool -> Bool -> RefData -> List (Html Msg)
+viewSingleActions viewAltRefs inEditMode data =
+    let
+        confAttr =
+            getConfirmAttributes (data.confirmed || not data.valid || inEditMode)
 
         altButton =
             if data.valid && not (List.isEmpty data.possible) then
@@ -30,36 +107,12 @@ viewActionButtons { viewAltRefs, inEditMode } data =
                 span [] []
 
         rmvAttr =
-            if inEditMode then
-                Attr.disabled True
-
-            else
-                onClick (ChangeRefData Remove)
+            getRemoveAttributes inEditMode
     in
-    div [ Attr.class "row b mt-4" ]
-        [ div [ Attr.class "col col-12" ]
-            [ div
-                [ attribute "aria-label" "Actions"
-                , Attr.class "btn-group w-100"
-                , attribute "role" "group"
-                ]
-                [ button
-                    [ Attr.class "btn btn-success"
-                    , type_ "button"
-                    , confAttr
-                    ]
-                    [ Html.text "Confirm" ]
-                , altButton
-                , button
-                    [ Attr.class "btn btn-outline-danger mr-1"
-                    , type_ "button"
-                    , styles [ marginLeft auto ]
-                    , rmvAttr
-                    ]
-                    [ Html.text "Remove" ]
-                ]
-            ]
-        ]
+    [ viewConfirmButton confAttr
+    , altButton
+    , viewRemoveButton rmvAttr
+    ]
 
 
 viewSingleAltButton : Bool -> List Osis -> Html Msg

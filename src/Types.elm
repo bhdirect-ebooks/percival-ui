@@ -37,6 +37,7 @@ import Array
 import Dict
 import Dom
 import Http
+import Json.Encode as E
 import Keyboard.Combo
 import Regex
 import UndoList exposing (UndoList)
@@ -101,6 +102,7 @@ type alias Model =
     , blockState : UndoList State
     , currentDocId : String
     , currentRefId : RefId
+    , selectedRefIds : List RefId
     , editingOsis : Bool
     , osisField : String
     , badInput : Bool
@@ -250,6 +252,8 @@ type Msg
     | ToDoc DocNav
     | ToRef NavDir (Maybe Confirmation)
     | HandleBlockRefClick RefId
+    | HandleMultiSelect (List String)
+    | ClearSelected
     | HandleListRefClick RefId
     | ToggleAltRefs
     | SetScripText (Result Http.Error String)
