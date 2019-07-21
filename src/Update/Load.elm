@@ -16,7 +16,7 @@ load data model =
                 , docs = data.docs
                 , blockState =
                     UndoList.fresh
-                        { changedBlockId = ""
+                        { changedBlockIds = []
                         , blocks = data.blocks
                         }
                 , currentDocId = getFirstIdOfDict data.docs

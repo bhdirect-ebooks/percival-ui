@@ -134,7 +134,7 @@ type alias Model =
 
 
 type alias State =
-    { changedBlockId : String
+    { changedBlockIds : List String
     , blocks : BlockDict
     }
 

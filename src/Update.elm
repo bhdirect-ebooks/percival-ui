@@ -1,7 +1,7 @@
 port module Update exposing (update)
 
 import Dict
-import ServerIO exposing (fetchScripText, postBlock)
+import ServerIO exposing (fetchScripText, postBlock, prepMultiplePostCommands)
 import Set
 import Types exposing (..)
 import UndoList exposing (UndoList)
@@ -24,9 +24,8 @@ import Update.ListRefs exposing (listRefs)
 import Update.Load exposing (load, loadErr)
 import Update.Navigate exposing (toDoc, toDocFromDash, toRef)
 import Update.OsisField exposing (changeOsis, handleParserError, handleParserSuccess, updateField)
-import Update.Redo exposing (redo)
 import Update.SelectRefs exposing (clearMultiSelect, handleBlockRefClick, handleListRefClick, handleMultiSelect)
-import Update.Undo exposing (undo)
+import Update.UndoRedo exposing (redo, undo)
 import Utils exposing (..)
 
 
@@ -236,7 +235,7 @@ changeSingleRef refDP model =
                 newBlockState =
                     model.blockState
                         |> UndoList.new
-                            { changedBlockId = blockId
+                            { changedBlockIds = [ blockId ]
                             , blocks = newBlockDict
                             }
 
@@ -274,11 +273,11 @@ changeSingleRef refDP model =
                 ! commands
 
 
-updateStateForMultipleBlocks : List ( String, Block ) -> UndoList State -> UndoList State
-updateStateForMultipleBlocks newBlockTups blockState =
+changeMultipleBlocks : List ( String, Block ) -> UndoList State -> BlockDict
+changeMultipleBlocks newBlockTups blockState =
     case newBlockTups of
         [] ->
-            blockState
+            blockState.present.blocks
 
         ( blockId, block ) :: tail ->
             let
@@ -286,27 +285,13 @@ updateStateForMultipleBlocks newBlockTups blockState =
                     blockState.present.blocks
                         |> Dict.update blockId (always (Just block))
 
-                newBlockState =
-                    blockState
-                        |> UndoList.new
-                            { changedBlockId = blockId
-                            , blocks = newBlockDict
-                            }
+                oldPresent =
+                    blockState.present
+
+                newPresent =
+                    { oldPresent | blocks = newBlockDict }
             in
-            updateStateForMultipleBlocks tail newBlockState
-
-
-prepMultiplePostCommands : List ( String, Block ) -> Cmd Msg -> Cmd Msg
-prepMultiplePostCommands newBlockTups cmd =
-    case newBlockTups of
-        [] ->
-            cmd
-
-        ( blockId, block ) :: tail ->
-            [ postBlock blockId block ]
-                |> List.append [ cmd ]
-                |> Cmd.batch
-                |> prepMultiplePostCommands tail
+            changeMultipleBlocks tail { blockState | present = newPresent }
 
 
 changeMultipleRefs : RefDataPoint -> Model -> ( Model, Cmd Msg )
@@ -321,21 +306,7 @@ changeMultipleRefs refDP model =
 
         -- 2. get all blocks
         blockTups =
-            blockIds
-                |> List.map
-                    (\blockId ->
-                        ( blockId, Dict.get blockId model.blockState.present.blocks )
-                    )
-                |> List.map
-                    (\( blockId, mayBlock ) ->
-                        case mayBlock of
-                            Nothing ->
-                                []
-
-                            Just block ->
-                                [ ( blockId, block ) ]
-                    )
-                |> List.concat
+            getListofBlockTups blockIds model
 
         -- 3. update all block refs in each block
         newBlockTups =
@@ -346,9 +317,16 @@ changeMultipleRefs refDP model =
                     )
 
         -- 4. create new block dict (update each block)
-        -- 5. update state for each block
+        newBlockDict =
+            changeMultipleBlocks newBlockTups model.blockState
+
+        -- 5. update state
         newBlockState =
-            updateStateForMultipleBlocks newBlockTups model.blockState
+            model.blockState
+                |> UndoList.new
+                    { changedBlockIds = blockIds
+                    , blocks = newBlockDict
+                    }
 
         interimModel =
             { model

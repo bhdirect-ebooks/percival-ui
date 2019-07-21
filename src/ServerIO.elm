@@ -19,6 +19,7 @@ module ServerIO exposing
     , postFieldInput
     , postNewHtml
     , postValidateHtml
+    , prepMultiplePostCommands
     )
 
 import Dict exposing (..)
@@ -223,3 +224,16 @@ postContext blockId context { versification, language } =
     in
     Http.post postUrl (Http.jsonBody ctxtObj) decodeBlock
         |> Http.send HandlePostHtml
+
+
+prepMultiplePostCommands : List ( String, Block ) -> Cmd Msg -> Cmd Msg
+prepMultiplePostCommands newBlockTups cmd =
+    case newBlockTups of
+        [] ->
+            cmd
+
+        ( blockId, block ) :: tail ->
+            [ postBlock blockId block ]
+                |> List.append [ cmd ]
+                |> Cmd.batch
+                |> prepMultiplePostCommands tail

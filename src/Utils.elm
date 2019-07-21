@@ -11,6 +11,7 @@ module Utils exposing
     , getFirstIdOfDict
     , getListedRefArray
     , getListedRefArrayBySelected
+    , getListofBlockTups
     , getNearbyDocId
     , getNearbyIdOfArray
     , getNearbyIdOfDict
@@ -541,6 +542,25 @@ updateListofBlockRefs refIdList refDP blockId block =
             List.filter (\refId -> belongsToBlock blockId refId) refIdList
     in
     doUpdateList blockRefIds refDP block
+
+
+getListofBlockTups : List String -> Model -> List ( String, Block )
+getListofBlockTups blockIds model =
+    blockIds
+        |> List.map
+            (\blockId ->
+                ( blockId, Dict.get blockId model.blockState.present.blocks )
+            )
+        |> List.map
+            (\( blockId, mayBlock ) ->
+                case mayBlock of
+                    Nothing ->
+                        []
+
+                    Just block ->
+                        [ ( blockId, block ) ]
+            )
+        |> List.concat
 
 
 getRevisedAltList : Osis -> RefData -> List Osis

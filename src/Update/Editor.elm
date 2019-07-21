@@ -169,7 +169,7 @@ handleHtmlSuccess block model =
         newBlockState =
             model.blockState
                 |> UndoList.new
-                    { changedBlockId = model.editingBlockId
+                    { changedBlockIds = [ model.editingBlockId ]
                     , blocks = newBlockDict
                     }
 

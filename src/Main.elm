@@ -38,7 +38,7 @@ initialModel =
     , docs = Dict.fromList []
     , blockState =
         UndoList.fresh
-            { changedBlockId = ""
+            { changedBlockIds = []
             , blocks = Dict.fromList []
             }
     , currentDocId = ""
