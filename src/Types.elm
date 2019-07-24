@@ -9,6 +9,7 @@ module Types exposing
     , DocNav(..)
     , DocStats
     , EditorTheme(..)
+    , HtmlTrust(..)
     , MarkerData
     , Messages
     , Model
@@ -16,6 +17,7 @@ module Types exposing
     , NavDir(..)
     , Opts
     , Osis
+    , ParsedText
     , PercivalData
     , Ref
     , RefAction(..)
@@ -28,6 +30,7 @@ module Types exposing
     , RefType(..)
     , ScrollDoc
     , ScrollList
+    , Selection
     , State
     , Stats
     , ValidatorMessage
@@ -46,6 +49,11 @@ import UndoList exposing (UndoList)
 type EditorTheme
     = Dark
     | Light
+
+
+type HtmlTrust
+    = Trusted
+    | Untrusted
 
 
 type NavDir
@@ -82,6 +90,7 @@ type RefType
 type RefAction
     = Multiple ( Validity, Confirmation )
     | Single RefData
+    | TextSelection
 
 
 type RefDataPoint
@@ -130,6 +139,7 @@ type alias Model =
     , viewAltRefs : Bool
     , viewScriptureText : Bool
     , scriptureText : String
+    , selection : Selection
     }
 
 
@@ -243,6 +253,19 @@ type alias MarkerData =
     }
 
 
+type alias Selection =
+    { blockId : String
+    , selectedText : String
+    , anchorOffset : Int
+    , focusOffset : Int
+    , textContent : String
+    }
+
+
+type alias ParsedText =
+    { parsedText : String }
+
+
 type Msg
     = DoNothing
     | NoOp (Result Dom.Error ())
@@ -278,6 +301,10 @@ type Msg
     | ToggleEditorTheme
     | CancelHtml
     | RevertHtml
-    | SubmitHtml
+    | SubmitHtml HtmlTrust
     | HandleMessages (Result Http.Error Messages)
     | HandlePostHtml (Result Http.Error Block)
+    | TrySelection
+    | HandleTextSelection Selection
+    | ParseSelection
+    | HandleTextParserResponse (Result Http.Error ParsedText)

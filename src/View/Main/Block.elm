@@ -2,7 +2,7 @@ module View.Main.Block exposing (viewBlock)
 
 import Html exposing (..)
 import Html.Attributes as Attr exposing (class, id)
-import Html.Events exposing (onDoubleClick)
+import Html.Events exposing (onDoubleClick, onMouseUp)
 import HtmlParser exposing (..)
 import HtmlParser.Util exposing (..)
 import Types exposing (..)
@@ -31,5 +31,6 @@ viewBlock blockId block model =
             [ Attr.class "blocks"
             , Attr.id blockId
             , onDoubleClick (EditBlock blockId)
+            , onMouseUp TrySelection
             ]
             (toVirtualDom nodes)

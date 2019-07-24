@@ -9,6 +9,7 @@ port module Update.Navigate exposing
 
 import Task
 import Types exposing (..)
+import Update.SelectText exposing (clearTextSelection)
 import Utils exposing (..)
 
 
@@ -50,6 +51,7 @@ toDoc navData model =
                     , viewScriptureText = False
                     , scriptureText = ""
                 }
+                    |> clearTextSelection
 
             docRefArray =
                 getDocRefArray newModel
@@ -90,7 +92,11 @@ toRef dir mayConfirm model =
         model ! []
 
     else
-        { model
+        let
+            newModel =
+                clearTextSelection model
+        in
+        { newModel
             | currentRefId = selectedRef
             , viewAltRefs = False
             , viewScriptureText = False

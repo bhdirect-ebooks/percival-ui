@@ -16,6 +16,7 @@ import UndoList exposing (UndoList)
 import Update exposing (update)
 import Update.KeyCombo exposing (keyboardCombos)
 import Update.SelectRefs exposing (clickedRef, multiSelect)
+import Update.SelectText exposing (textSelected)
 import View exposing (viewOrError)
 
 
@@ -66,6 +67,13 @@ initialModel =
     , viewAltRefs = False
     , viewScriptureText = False
     , scriptureText = ""
+    , selection =
+        { blockId = ""
+        , selectedText = ""
+        , anchorOffset = 0
+        , focusOffset = 0
+        , textContent = ""
+        }
     }
 
 
@@ -89,6 +97,7 @@ subscriptions model =
             [ Keyboard.Combo.subscriptions model.keys
             , clickedRef HandleBlockRefClick
             , multiSelect HandleMultiSelect
+            , textSelected HandleTextSelection
             ]
 
 

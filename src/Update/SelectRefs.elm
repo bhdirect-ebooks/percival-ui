@@ -11,6 +11,7 @@ port module Update.SelectRefs exposing
 import Task
 import Types exposing (..)
 import Update.Navigate exposing (scrollDoc, scrollList)
+import Update.SelectText exposing (clearTextSelection)
 import Utils exposing (..)
 
 
@@ -32,12 +33,15 @@ handleBlockRefClick refId model =
         isListedRef =
             isInRefIdArray refId model.listedRefIds
 
-        newModel =
+        interimModel =
             if isGoodRef && isListedRef then
                 model
 
             else
                 { model | selectedRefType = Nothing }
+
+        newModel =
+            clearTextSelection interimModel
 
         listedRefArray =
             getListedRefArray newModel
@@ -104,12 +108,15 @@ handleListRefClick refId model =
 
         osisOrMessage =
             getOsisWithRefId refId model.blockState.present.blocks
+
+        newModel =
+            clearTextSelection model
     in
     if model.currentRefId == refId || model.inEditMode then
         model ! []
 
     else
-        { model
+        { newModel
             | currentRefId = refId
             , viewAltRefs = False
             , viewScriptureText = False

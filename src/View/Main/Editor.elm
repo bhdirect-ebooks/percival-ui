@@ -98,7 +98,7 @@ viewEditor blockId { htmlSource, editorTheme, htmlValidation, isValidating } =
                     [ Html.text "Reset" ]
                 , Html.button
                     [ Attr.class "btn btn-sm btn-primary ml-3"
-                    , onClick SubmitHtml
+                    , onClick (SubmitHtml Untrusted)
                     ]
                     [ Html.text "Submit" ]
                 , viewValidatorMessages htmlValidation

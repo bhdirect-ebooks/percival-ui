@@ -3,13 +3,13 @@ module View.Menu.ActionPanel.ActionButtons exposing (viewActionButtons)
 import Css exposing (..)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (attribute, class, classList, href, id, src, type_)
-import Html.Events exposing (keyCode, onClick)
+import Html.Events exposing (keyCode, onBlur, onClick, onFocus, onInput)
 import Types exposing (..)
-import View.Util exposing (styles)
+import View.Util exposing (onEnter, styles)
 
 
 viewActionButtons : Model -> RefAction -> Html Msg
-viewActionButtons { viewAltRefs, inEditMode } action =
+viewActionButtons { viewAltRefs, inEditMode, contextField } action =
     let
         buttons =
             case action of
@@ -18,17 +18,25 @@ viewActionButtons { viewAltRefs, inEditMode } action =
 
                 Single data ->
                     viewSingleActions viewAltRefs inEditMode data
+
+                TextSelection ->
+                    viewTextSelectionActions contextField
     in
-    div [ Attr.class "row b mt-4" ]
-        [ div [ Attr.class "col col-12" ]
-            [ div
-                [ attribute "aria-label" "Actions"
-                , Attr.class "btn-group w-100"
-                , attribute "role" "group"
+    case action of
+        TextSelection ->
+            div [] buttons
+
+        _ ->
+            div [ Attr.class "row b mt-4" ]
+                [ div [ Attr.class "col col-12" ]
+                    [ div
+                        [ attribute "aria-label" "Actions"
+                        , Attr.class "btn-group w-100"
+                        , attribute "role" "group"
+                        ]
+                        buttons
+                    ]
                 ]
-                buttons
-            ]
-        ]
 
 
 viewConfirmButton : Attribute msg -> Html msg
@@ -207,3 +215,47 @@ viewAlternate osis =
         , onClick (ChangeRefData (Scripture osis))
         ]
         [ Html.text osis ]
+
+
+viewTextSelectionActions : String -> List (Html Msg)
+viewTextSelectionActions contextField =
+    [ div [ Attr.class "row b mt-4" ]
+        [ div
+            [ Attr.class "col col-9" ]
+            [ input
+                [ Attr.class "w-100 mt-1"
+                , Attr.value contextField
+                , Attr.name "context"
+                , Attr.id "context-field"
+                , onInput UpdateContextField
+                , onFocus (EditContext True)
+                , onBlur (EditContext False)
+                , onEnter ParseSelection
+                , styles [ color (hex "29363d") ]
+                ]
+                []
+            ]
+        , div [ Attr.class "col col-3" ]
+            [ div
+                [ attribute "aria-label" "Actions"
+                , Attr.class "btn-group w-100"
+                , attribute "role" "group"
+                ]
+                [ button
+                    [ Attr.class "btn btn-outline-primary mr-1 ml-auto"
+                    , type_ "button"
+                    , onClick ParseSelection
+                    ]
+                    [ Html.text "Parse" ]
+                ]
+            ]
+        ]
+    , div
+        [ Attr.class "row mt-1" ]
+        [ div
+            [ Attr.class "col col-12" ]
+            [ Html.small [ Attr.class "text-muted i" ]
+                [ Html.text "Provide context if no book appears in the selection." ]
+            ]
+        ]
+    ]

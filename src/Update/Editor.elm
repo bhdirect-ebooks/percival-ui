@@ -6,7 +6,6 @@ module Update.Editor exposing
     , handleHtmlSuccess
     , handleSuccessMessage
     , revertHtml
-    , submitHtml
     , toggleEditorTheme
     , updateSource
     )
@@ -18,6 +17,8 @@ import Task
 import Types exposing (..)
 import UndoList exposing (UndoList)
 import Update.SelectRefs exposing (clearSelected)
+import Update.SelectText exposing (clearTextSelection, deselect)
+import Update.SubmitHtml exposing (submitHtml)
 import Utils exposing (..)
 
 
@@ -29,13 +30,16 @@ editBlock blockId model =
 
         listedRefArray =
             getListedRefArray model
+
+        newModel =
+            clearTextSelection model
     in
     case block of
         Nothing ->
             model ! []
 
         Just block ->
-            { model
+            { newModel
                 | currentRefId = ""
                 , listedRefIds = listedRefArray
                 , selectedRefIds = []
@@ -44,7 +48,7 @@ editBlock blockId model =
                 , editorActive = True
                 , editingBlockId = blockId
             }
-                ! [ clearSelected True ]
+                ! [ clearSelected True, deselect True ]
 
 
 updateSource : String -> Model -> ( Model, Cmd Msg )
@@ -68,7 +72,11 @@ toggleEditorTheme model =
 
 cancelHtml : Model -> ( Model, Cmd Msg )
 cancelHtml model =
-    { model
+    let
+        newModel =
+            clearTextSelection model
+    in
+    { newModel
         | htmlSource = ""
         , inEditMode = False
         , editorActive = False
@@ -76,7 +84,7 @@ cancelHtml model =
         , isValidating = False
         , htmlValidation = []
     }
-        ! []
+        ! [ deselect True ]
 
 
 revertHtml : Model -> ( Model, Cmd Msg )
@@ -96,16 +104,6 @@ revertHtml model =
                 , htmlValidation = []
             }
                 ! []
-
-
-submitHtml : Model -> ( Model, Cmd Msg )
-submitHtml model =
-    if model.htmlSource == "" then
-        { model | htmlValidation = [ "Cannot be empty." ] }
-            ! [ Task.attempt (\_ -> DoNothing) (Dom.focus model.editingBlockId) ]
-
-    else
-        { model | isValidating = True } ! [ postValidateHtml model.htmlSource ]
 
 
 handleErrorMessage : a -> Model -> ( Model, Cmd Msg )
@@ -201,6 +199,7 @@ handleHtmlSuccess block model =
                 | docRefIds = docRefArray
                 , listedRefIds = listedRefArray
             }
+                |> clearTextSelection
 
         dashboard =
             updateDashboard model.editingBlockId newModel

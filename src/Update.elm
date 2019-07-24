@@ -1,4 +1,4 @@
-port module Update exposing (update)
+module Update exposing (update)
 
 import Dict
 import ServerIO exposing (fetchScripText, postBlock, prepMultiplePostCommands)
@@ -15,7 +15,6 @@ import Update.Editor
         , handleHtmlSuccess
         , handleSuccessMessage
         , revertHtml
-        , submitHtml
         , toggleEditorTheme
         , updateSource
         )
@@ -23,8 +22,10 @@ import Update.KeyCombo exposing (comboMsg)
 import Update.ListRefs exposing (listRefs)
 import Update.Load exposing (load, loadErr)
 import Update.Navigate exposing (toDoc, toDocFromDash, toRef)
-import Update.OsisField exposing (changeOsis, handleParserError, handleParserSuccess, updateField)
+import Update.OsisField exposing (changeOsis, editOsis, handleParserError, handleParserSuccess, updateField)
 import Update.SelectRefs exposing (clearMultiSelect, handleBlockRefClick, handleListRefClick, handleMultiSelect)
+import Update.SelectText exposing (handleTextParserSuccess, handleTextSelection, parseSelection, trySelection)
+import Update.SubmitHtml exposing (submitHtml)
 import Update.UndoRedo exposing (redo, undo)
 import Utils exposing (..)
 
@@ -127,7 +128,7 @@ update msg model =
                 changeSingleRef refDP model
 
         EditOsis ->
-            changeOsis model
+            editOsis model
 
         UpdateField str ->
             updateField str model
@@ -169,8 +170,8 @@ update msg model =
         RevertHtml ->
             revertHtml model
 
-        SubmitHtml ->
-            submitHtml model
+        SubmitHtml trust ->
+            submitHtml trust model
 
         HandleMessages (Err err) ->
             handleErrorMessage err model
@@ -187,6 +188,21 @@ update msg model =
 
         HandlePostHtml (Ok block) ->
             handleHtmlSuccess block model
+
+        TrySelection ->
+            model ! [ trySelection True ]
+
+        HandleTextSelection selection ->
+            handleTextSelection selection model
+
+        ParseSelection ->
+            parseSelection model
+
+        HandleTextParserResponse (Err err) ->
+            handleParserError err model
+
+        HandleTextParserResponse (Ok tagged) ->
+            handleTextParserSuccess tagged model
 
 
 chooseParsedPath : RefData -> Model -> ( Model, Cmd Msg )
