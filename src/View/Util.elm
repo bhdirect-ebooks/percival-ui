@@ -1,5 +1,21 @@
-module View.Util exposing (..)
+module View.Util exposing
+    ( getChildNodes
+    , getKeyValueIfInDict
+    , getRefNode
+    , getRefsByListed
+    , isScriptureRef
+    , onClickNoop
+    , onEnter
+    , processElement
+    , processNode
+    , processNodes
+    , refListConfirmation
+    , refListValidity
+    , styles
+    , toReadableString
+    )
 
+import Array
 import Css exposing (..)
 import Dict exposing (..)
 import Html exposing (..)
@@ -51,14 +67,15 @@ onEnter msg =
         isEnter code =
             if code == 13 then
                 Json.succeed msg
+
             else
                 Json.fail "not ENTER"
     in
     on "keydown" (Json.andThen isEnter keyCode)
 
 
-processNodes : List Node -> RefDict -> RefId -> ( List Node, RefDict )
-processNodes nodes refs currentRefId =
+processNodes : List Node -> RefDict -> RefId -> List RefId -> ( List Node, RefDict )
+processNodes nodes refs currentRefId selectedRefIds =
     let
         ( processedNode, remainingRefs ) =
             case List.head nodes of
@@ -66,7 +83,7 @@ processNodes nodes refs currentRefId =
                     ( Text "", refs )
 
                 Just node ->
-                    processNode node refs currentRefId
+                    processNode node refs currentRefId selectedRefIds
     in
     case List.tail nodes of
         Nothing ->
@@ -75,26 +92,26 @@ processNodes nodes refs currentRefId =
         Just nodesTail ->
             let
                 ( siblingNodes, trueRemaining ) =
-                    processNodes nodesTail remainingRefs currentRefId
+                    processNodes nodesTail remainingRefs currentRefId selectedRefIds
             in
             ( List.concat [ [ processedNode ], siblingNodes ], trueRemaining )
 
 
-processNode : Node -> RefDict -> RefId -> ( Node, RefDict )
-processNode node refs currentRefId =
+processNode : Node -> RefDict -> RefId -> List RefId -> ( Node, RefDict )
+processNode node refs currentRefId selectedRefIds =
     case node of
         Text str ->
             ( node, refs )
 
         Element tagName attrs children ->
-            processElement ( node, refs ) currentRefId tagName attrs children
+            processElement ( node, refs ) ( currentRefId, selectedRefIds ) tagName attrs children
 
         Comment str ->
             ( node, refs )
 
 
-processElement : ( Node, RefDict ) -> RefId -> String -> Attributes -> List Node -> ( Node, RefDict )
-processElement orig currentRefId tagName attrs children =
+processElement : ( Node, RefDict ) -> ( RefId, List RefId ) -> String -> Attributes -> List Node -> ( Node, RefDict )
+processElement orig refSelection tagName attrs children =
     let
         attrNames =
             Tuple.first (List.unzip attrs)
@@ -104,11 +121,16 @@ processElement orig currentRefId tagName attrs children =
 
         hasChildren =
             Basics.not (List.isEmpty children)
+
+        ( currentRefId, selectedRefIds ) =
+            refSelection
     in
     if isRefTag then
-        getRefNode (Tuple.second orig) currentRefId
+        getRefNode (Tuple.second orig) currentRefId selectedRefIds
+
     else if hasChildren then
-        getChildNodes orig currentRefId tagName attrs children
+        getChildNodes orig refSelection tagName attrs children
+
     else
         orig
 
@@ -121,17 +143,20 @@ isScriptureRef attrs =
         |> not
 
 
-getChildNodes : ( Node, RefDict ) -> RefId -> String -> Attributes -> List Node -> ( Node, RefDict )
-getChildNodes orig currentRefId tagName attrs children =
+getChildNodes : ( Node, RefDict ) -> ( RefId, List RefId ) -> String -> Attributes -> List Node -> ( Node, RefDict )
+getChildNodes orig refSelection tagName attrs children =
     let
+        ( currentRefId, selectedRefIds ) =
+            refSelection
+
         ( processedNodes, remainingRefs ) =
-            processNodes children (Tuple.second orig) currentRefId
+            processNodes children (Tuple.second orig) currentRefId selectedRefIds
     in
     ( Element tagName attrs processedNodes, remainingRefs )
 
 
-getRefNode : RefDict -> RefId -> ( Node, RefDict )
-getRefNode refs currentRefId =
+getRefNode : RefDict -> RefId -> List RefId -> ( Node, RefDict )
+getRefNode refs currentRefId selectedRefIds =
     let
         refId =
             getFirstIdOfDict refs
@@ -145,6 +170,9 @@ getRefNode refs currentRefId =
         isCurrent =
             currentRefId == refId
 
+        isSelected =
+            List.member refId selectedRefIds
+
         colorType =
             case ref of
                 Nothing ->
@@ -153,8 +181,10 @@ getRefNode refs currentRefId =
                 Just goodRef ->
                     if isInvalid goodRef then
                         "danger"
+
                     else if isConfirmed goodRef then
                         "success"
+
                     else
                         "warning"
 
@@ -166,12 +196,13 @@ getRefNode refs currentRefId =
                 Just goodRef ->
                     let
                         classes =
-                            if isCurrent then
+                            if isCurrent || isSelected then
                                 String.concat
                                     [ "btn-outline-"
                                     , colorType
                                     , " p-1 ref ref--selected"
                                     ]
+
                             else
                                 String.concat
                                     [ "btn-outline-"
@@ -206,3 +237,48 @@ getKeyValueIfInDict refId refs =
 
         Just ref ->
             Just ( refId, ref )
+
+
+getRefsByListed : Model -> List RefData
+getRefsByListed model =
+    let
+        docRefs =
+            getDocRefs model
+                |> Dict.fromList
+    in
+    model.listedRefIds
+        |> Array.toList
+        |> List.filterMap (\( k, v ) -> getKeyValueIfInDict k docRefs)
+        |> List.map (\( k, v ) -> v.data)
+
+
+refListValidity : List RefData -> Validity
+refListValidity refDataList =
+    let
+        allValid =
+            refDataList
+                |> List.filter (\data -> not data.valid)
+                |> List.isEmpty
+    in
+    case allValid of
+        True ->
+            Valid
+
+        False ->
+            Invalid
+
+
+refListConfirmation : List RefData -> Confirmation
+refListConfirmation refDataList =
+    let
+        allConfirmed =
+            refDataList
+                |> List.filter (\data -> not data.confirmed)
+                |> List.isEmpty
+    in
+    case allConfirmed of
+        True ->
+            Confirmed
+
+        False ->
+            Unconfirmed

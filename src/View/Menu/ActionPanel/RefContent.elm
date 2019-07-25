@@ -21,9 +21,8 @@ viewRefContent ref model =
             let
                 invalid =
                     isInvalid ref
-            in
-            if invalid then
-                div []
+
+                addContextElems =
                     [ div [ Attr.class "row mt-4" ]
                         [ div
                             [ Attr.class "col col-12" ]
@@ -54,12 +53,17 @@ viewRefContent ref model =
                             ]
                         ]
                     ]
+            in
+            if invalid then
+                div [] addContextElems
+
             else if model.viewScriptureText then
                 div
                     [ Attr.class "container ml-0"
                     , styles [ height (pct 100) ]
                     ]
-                    [ div [ Attr.class "row mt-4 mb-3" ]
+                    [ div
+                        [ Attr.class "row mt-4 mb-3" ]
                         [ div
                             [ Attr.class "col col-12 border border-left-0 border-right-0 border-bottom-0 pt-4 pb-2 px-0"
                             , styles
@@ -94,13 +98,28 @@ viewRefContent ref model =
                                 ]
                              ]
                                 |> List.append (toVirtualDom (parse model.scriptureText))
+                                |> List.append
+                                    [ button
+                                        [ type_ "button"
+                                        , styles [ marginTop (Css.em -0.75) ]
+                                        , Attr.class "btn btn-outline-secondary float-right"
+                                        , onClick HideScripture
+                                        ]
+                                        [ Html.text "Hide Passage" ]
+                                    ]
                             )
                         ]
                     ]
+
             else
-                button
-                    [ type_ "button"
-                    , Attr.class "btn btn-outline-secondary mt-4"
-                    , onClick (ShowScripture ref.data.scripture)
-                    ]
-                    [ Html.text "View Passage" ]
+                div []
+                    (List.append
+                        [ button
+                            [ type_ "button"
+                            , Attr.class "btn btn-outline-secondary mt-4"
+                            , onClick (ShowScripture ref.data.scripture)
+                            ]
+                            [ Html.text "View Passage" ]
+                        ]
+                        addContextElems
+                    )

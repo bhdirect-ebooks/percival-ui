@@ -1,4 +1,27 @@
-module ServerIO exposing (..)
+module ServerIO exposing
+    ( decodeBlock
+    , decodeBlockDict
+    , decodeDoc
+    , decodeDocDict
+    , decodeMessages
+    , decodeOpts
+    , decodePercivalData
+    , decodeRef
+    , decodeRefData
+    , decodeRefDict
+    , decodeValidatorMessage
+    , encodeRef
+    , encodeRefData
+    , encodeRefsObj
+    , fetchScripText
+    , postBlock
+    , postContext
+    , postFieldInput
+    , postNewHtml
+    , postTextSelection
+    , postValidateHtml
+    , prepMultiplePostCommands
+    )
 
 import Dict exposing (..)
 import Http exposing (..)
@@ -84,6 +107,12 @@ decodeValidatorMessage =
         |> required "message" string
 
 
+decodeParsedText : Decoder ParsedText
+decodeParsedText =
+    decode ParsedText
+        |> required "parsedText" string
+
+
 encodeRefData : RefData -> Encode.Value
 encodeRefData data =
     Encode.object
@@ -150,6 +179,25 @@ postFieldInput input { versification, language } =
         |> Http.send HandleParserResponse
 
 
+postTextSelection : String -> String -> Opts -> Cmd Msg
+postTextSelection selection context { versification, language } =
+    let
+        inputObj =
+            Encode.object
+                [ ( "selection", Encode.string selection )
+                , ( "context", Encode.string context )
+                ]
+
+        postUrl =
+            "http://localhost:7777/parseselection?vers="
+                ++ versification
+                ++ "&lang="
+                ++ language
+    in
+    Http.post postUrl (Http.jsonBody inputObj) decodeParsedText
+        |> Http.send HandleTextParserResponse
+
+
 fetchScripText : Osis -> Cmd Msg
 fetchScripText osis =
     Http.getString ("https://ygjutai0z5.execute-api.us-east-1.amazonaws.com/percival/" ++ osis)
@@ -202,3 +250,16 @@ postContext blockId context { versification, language } =
     in
     Http.post postUrl (Http.jsonBody ctxtObj) decodeBlock
         |> Http.send HandlePostHtml
+
+
+prepMultiplePostCommands : List ( String, Block ) -> Cmd Msg -> Cmd Msg
+prepMultiplePostCommands newBlockTups cmd =
+    case newBlockTups of
+        [] ->
+            cmd
+
+        ( blockId, block ) :: tail ->
+            [ postBlock blockId block ]
+                |> List.append [ cmd ]
+                |> Cmd.batch
+                |> prepMultiplePostCommands tail
