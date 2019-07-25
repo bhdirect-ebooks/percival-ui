@@ -22,12 +22,37 @@ viewMenu model =
 
         refList =
             Dict.values docRefs
+
+        multiSelect =
+            List.length model.selectedRefIds > 1
+
+        miniPanelHeight =
+            px 150
+
+        actPanelMinHeight =
+            if multiSelect then
+                miniPanelHeight
+
+            else
+                px 475
+
+        actPanelHeight =
+            if multiSelect then
+                miniPanelHeight
+
+            else
+                px 515
+
+        scripListReduction =
+            if multiSelect then
+                miniPanelHeight
+
+            else
+                px 561
     in
     aside
         [ Attr.class "aside-menu"
-        , styles
-            [ Css.width (px 400)
-            ]
+        , styles [ Css.width (px 400) ]
         ]
         [ viewTypeNav refList
         , div
@@ -41,7 +66,7 @@ viewMenu model =
                 [ Attr.id "scripture-list"
                 , styles
                     [ overflowY scroll
-                    , Css.height (calc (pct 100) minus (px 561))
+                    , Css.height (calc (pct 100) minus scripListReduction)
                     , position relative
                     ]
                 ]
@@ -51,13 +76,13 @@ viewMenu model =
                 , styles
                     [ bottom (pct 0)
                     , Css.width (px 400)
-                    , Css.height (px 515)
-                    , minHeight (px 475)
+                    , Css.height actPanelHeight
+                    , minHeight actPanelMinHeight
                     , backgroundColor white
                     , borderTop3 (px 1) solid (rgba 170 170 170 1.0)
                     , maxHeight (calc (vh 100) minus (px 46))
                     ]
                 ]
-                (viewActionPanel docRefs model)
+                (viewActionPanel docRefs multiSelect model)
             ]
         ]

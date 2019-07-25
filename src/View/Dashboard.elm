@@ -97,25 +97,25 @@ viewDashboard model =
                                 , br []
                                     []
                                 , div [ class "container t-contain m-0 p-0" ]
-                                        [ table
-                                            [ attribute "aria-busy" "false"
-                                            , class "table mb-0 b-table table-hover"
-                                            , attribute "outline" ""
-                                            ]
-                                            [   thead []
-                                                [ tr []
-                                                    [ th [ class "w-30" ]
-                                                        [ text "File" ]
-                                                    , th [ class "w-20 text-center" ]
-                                                        [ text "Total" ]
-                                                    , th [ class "w-50" ]
-                                                        [ text "Stats" ]
-                                                    ]
-                                                ]
-                                            , tbody []
-                                                (List.map viewDashTableRow docStatsSorted)
-                                            ]
+                                    [ table
+                                        [ attribute "aria-busy" "false"
+                                        , class "table mb-0 b-table table-hover"
+                                        , attribute "outline" ""
                                         ]
+                                        [ thead []
+                                            [ tr []
+                                                [ th [ class "w-30" ]
+                                                    [ text "File" ]
+                                                , th [ class "w-20 text-center" ]
+                                                    [ text "Total" ]
+                                                , th [ class "w-50" ]
+                                                    [ text "Stats" ]
+                                                ]
+                                            ]
+                                        , tbody []
+                                            (List.map viewDashTableRow docStatsSorted)
+                                        ]
+                                    ]
                                 ]
                             ]
                         ]
@@ -126,17 +126,18 @@ viewDashboard model =
 
 
 viewDashTableRow : DocStats -> Html Msg
-viewDashTableRow (docId, docStat) =
+viewDashTableRow ( docId, docStat ) =
     let
         navId =
             docId ++ "-01"
 
         total =
             docStat.stats.confirmed
-            + docStat.stats.lowConfidence
-            + docStat.stats.invalid
+                + docStat.stats.lowConfidence
+                + docStat.stats.invalid
 
-        totalStr = total |> toReadableString
+        totalStr =
+            total |> toReadableString
     in
     tr [ onClick (ToDocFromDash navId) ]
         [ td []
@@ -165,12 +166,13 @@ viewFileStats total stats =
             (List.concat [ cfLines, lcLines, ivLines ])
         ]
 
+
 viewDashLines : String -> Int -> Int -> List (Html Msg)
 viewDashLines bg total cnt =
     let
         pct =
-            round (((toFloat cnt) / (toFloat total)) * 100)
-            |> toString
+            round ((toFloat cnt / toFloat total) * 100)
+                |> toString
     in
     if cnt > 0 then
         [ div
@@ -179,9 +181,10 @@ viewDashLines bg total cnt =
             , attribute "aria-valuenow" pct
             , class ("progress-bar " ++ bg)
             , attribute "role" "progressbar"
-            , attribute "style" ("height: 1rem; line-height: 1rem; width: "++ pct ++ "%")
+            , attribute "style" ("height: 1rem; line-height: 1rem; width: " ++ pct ++ "%")
             ]
             []
         ]
+
     else
         []

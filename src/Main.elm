@@ -1,4 +1,9 @@
-module Main exposing (..)
+module Main exposing
+    ( initialCmd
+    , initialModel
+    , main
+    , subscriptions
+    )
 
 import Array
 import Dict
@@ -8,7 +13,10 @@ import Keyboard.Combo
 import ServerIO exposing (decodePercivalData)
 import Types exposing (..)
 import UndoList exposing (UndoList)
-import Update exposing (..)
+import Update exposing (update)
+import Update.KeyCombo exposing (keyboardCombos)
+import Update.SelectRefs exposing (clickedRef, multiSelect)
+import Update.SelectText exposing (textSelected)
 import View exposing (viewOrError)
 
 
@@ -31,11 +39,12 @@ initialModel =
     , docs = Dict.fromList []
     , blockState =
         UndoList.fresh
-            { changedBlockId = ""
+            { changedBlockIds = []
             , blocks = Dict.fromList []
             }
     , currentDocId = ""
     , currentRefId = ""
+    , selectedRefIds = []
     , editingOsis = False
     , osisField = ""
     , badInput = False
@@ -58,6 +67,13 @@ initialModel =
     , viewAltRefs = False
     , viewScriptureText = False
     , scriptureText = ""
+    , selection =
+        { blockId = ""
+        , selectedText = ""
+        , anchorOffset = 0
+        , focusOffset = 0
+        , textContent = ""
+        }
     }
 
 
@@ -71,11 +87,17 @@ initialCmd =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     if model.inEditMode then
-        Sub.batch [ clickedRef HandleBlockRefClick ]
+        Sub.batch
+            [ clickedRef HandleBlockRefClick
+            , multiSelect HandleMultiSelect
+            ]
+
     else
         Sub.batch
             [ Keyboard.Combo.subscriptions model.keys
             , clickedRef HandleBlockRefClick
+            , multiSelect HandleMultiSelect
+            , textSelected HandleTextSelection
             ]
 
 

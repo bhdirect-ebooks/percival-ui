@@ -21,8 +21,10 @@ viewScriptureCallout currentRefId ( refId, ref ) =
         colorType =
             if isInvalid ref then
                 "danger"
+
             else if isConfirmed ref then
                 "success"
+
             else
                 "warning"
 
@@ -43,6 +45,7 @@ viewScriptureCallout currentRefId ( refId, ref ) =
         osisText =
             if isInvalid ref then
                 ref.data.message
+
             else
                 ref.data.scripture
     in

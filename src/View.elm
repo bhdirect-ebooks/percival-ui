@@ -1,4 +1,4 @@
-module View exposing (..)
+module View exposing (view, viewOrError)
 
 import Html exposing (..)
 import Html.Attributes as Attr exposing (attribute, class, src)
@@ -46,8 +46,10 @@ view model =
         modalBackdrop =
             if model.showDash then
                 div [ Attr.class "modal-backdrop modal-backdrop-primary fade show" ] []
+
             else if model.inHelp then
                 div [ Attr.class "modal-backdrop fade show" ] []
+
             else
                 span [] []
     in

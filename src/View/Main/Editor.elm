@@ -29,12 +29,14 @@ viewEditor blockId { htmlSource, editorTheme, htmlValidation, isValidating } =
         cardClasses =
             if List.isEmpty htmlValidation then
                 Attr.class "card d-block m-3 animated fadeIn"
+
             else
                 Attr.class "card card-danger d-block m-3 no-no shake-effect"
 
         validateSpan =
             if isValidating then
                 span [ Attr.class "mr-5 text-secondary" ] [ Html.text "Checking HTML..." ]
+
             else
                 span [] []
     in
@@ -96,7 +98,7 @@ viewEditor blockId { htmlSource, editorTheme, htmlValidation, isValidating } =
                     [ Html.text "Reset" ]
                 , Html.button
                     [ Attr.class "btn btn-sm btn-primary ml-3"
-                    , onClick SubmitHtml
+                    , onClick (SubmitHtml Untrusted)
                     ]
                     [ Html.text "Submit" ]
                 , viewValidatorMessages htmlValidation
@@ -109,6 +111,7 @@ viewValidatorMessages : List String -> Html Msg
 viewValidatorMessages htmlValidation =
     if List.isEmpty htmlValidation then
         span [] []
+
     else
         ul [ Attr.class "list-group text-left mt-3" ]
             (htmlValidation

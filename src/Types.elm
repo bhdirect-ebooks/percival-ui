@@ -1,4 +1,41 @@
-module Types exposing (..)
+module Types exposing
+    ( Block
+    , BlockDict
+    , Confidence(..)
+    , Confirmation(..)
+    , Dashboard
+    , Doc
+    , DocDict
+    , DocNav(..)
+    , DocStats
+    , EditorTheme(..)
+    , HtmlTrust(..)
+    , MarkerData
+    , Messages
+    , Model
+    , Msg(..)
+    , NavDir(..)
+    , Opts
+    , Osis
+    , ParsedText
+    , PercivalData
+    , Ref
+    , RefAction(..)
+    , RefData
+    , RefDataPoint(..)
+    , RefDict
+    , RefId
+    , RefIdArray
+    , RefStuff
+    , RefType(..)
+    , ScrollDoc
+    , ScrollList
+    , Selection
+    , State
+    , Stats
+    , ValidatorMessage
+    , Validity(..)
+    )
 
 import Array
 import Dict
@@ -12,6 +49,11 @@ import UndoList exposing (UndoList)
 type EditorTheme
     = Dark
     | Light
+
+
+type HtmlTrust
+    = Trusted
+    | Untrusted
 
 
 type NavDir
@@ -45,6 +87,12 @@ type RefType
     | Confirm Confirmation
 
 
+type RefAction
+    = Multiple ( Validity, Confirmation )
+    | Single RefData
+    | TextSelection
+
+
 type RefDataPoint
     = Scripture Osis
     | UserConf Confirmation
@@ -68,6 +116,7 @@ type alias Model =
     , blockState : UndoList State
     , currentDocId : String
     , currentRefId : RefId
+    , selectedRefIds : List RefId
     , editingOsis : Bool
     , osisField : String
     , badInput : Bool
@@ -90,11 +139,12 @@ type alias Model =
     , viewAltRefs : Bool
     , viewScriptureText : Bool
     , scriptureText : String
+    , selection : Selection
     }
 
 
 type alias State =
-    { changedBlockId : String
+    { changedBlockIds : List String
     , blocks : BlockDict
     }
 
@@ -203,6 +253,19 @@ type alias MarkerData =
     }
 
 
+type alias Selection =
+    { blockId : String
+    , selectedText : String
+    , anchorOffset : Int
+    , focusOffset : Int
+    , textContent : String
+    }
+
+
+type alias ParsedText =
+    { parsedText : String }
+
+
 type Msg
     = DoNothing
     | NoOp (Result Dom.Error ())
@@ -217,10 +280,13 @@ type Msg
     | ToDoc DocNav
     | ToRef NavDir (Maybe Confirmation)
     | HandleBlockRefClick RefId
+    | HandleMultiSelect (List String)
+    | ClearSelected
     | HandleListRefClick RefId
     | ToggleAltRefs
     | SetScripText (Result Http.Error String)
     | ShowScripture Osis
+    | HideScripture
     | HandlePostResponse (Result Http.Error Block)
     | ChangeRefData RefDataPoint
     | EditOsis
@@ -235,6 +301,10 @@ type Msg
     | ToggleEditorTheme
     | CancelHtml
     | RevertHtml
-    | SubmitHtml
+    | SubmitHtml HtmlTrust
     | HandleMessages (Result Http.Error Messages)
     | HandlePostHtml (Result Http.Error Block)
+    | TrySelection
+    | HandleTextSelection Selection
+    | ParseSelection
+    | HandleTextParserResponse (Result Http.Error ParsedText)
